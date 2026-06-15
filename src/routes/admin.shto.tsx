@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Save, ImageOff } from "lucide-react";
+import { Loader2, Save, ImageOff, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORIES, CONDITIONS, formatPrice } from "@/lib/cities";
-import { adminInsertProducts } from "@/lib/admin.functions";
+import { adminInsertProducts, adminUploadProductImage } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { toast } from "sonner";
 
@@ -35,8 +35,44 @@ const empty = {
 
 function AddProductPage() {
   const [form, setForm] = useState(empty);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  async function handleUpload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vetëm foto janë të lejuara");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Foto më e madhe se 5MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const buf = await file.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      const dataBase64 = btoa(binary);
+      const res = await adminUploadProductImage({
+        data: {
+          token: requireToken(),
+          filename: file.name,
+          contentType: file.type,
+          dataBase64,
+        },
+      });
+      set("image_url", res.url);
+      toast.success("Foto u ngarkua!");
+    } catch (e: any) {
+      toast.error("Ngarkimi dështoi", { description: e.message });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -167,16 +203,49 @@ function AddProductPage() {
           </div>
 
           <div>
-            <Label htmlFor="img">URL e Fotos</Label>
+            <Label>Foto e produktit</Label>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="rounded-full"
+              >
+                {uploading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                Ngarko Foto
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+              />
+              {form.image_url && (
+                <button
+                  type="button"
+                  onClick={() => set("image_url", "")}
+                  className="text-xs text-muted-foreground hover:text-destructive"
+                >
+                  Hiq foton
+                </button>
+              )}
+            </div>
             <Input
               id="img"
               type="url"
               value={form.image_url}
               onChange={(e) => set("image_url", e.target.value)}
-              placeholder="https://..."
+              placeholder="ose ngjit një URL: https://..."
+              className="mt-2"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Ngjit një URL të fotos nga interneti.
+              Ngarko nga pajisja jote ose ngjit një URL nga interneti.
             </p>
           </div>
 

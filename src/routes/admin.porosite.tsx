@@ -1,9 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Trash2, Phone, MapPin, Package2 } from "lucide-react";
+import { Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -11,7 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { adminListOrders, adminUpdateOrderStatus, adminDeleteOrder } from "@/lib/admin.functions";
+import {
+  adminListOrders,
+  adminUpdateOrderStatus,
+  adminDeleteOrder,
+  adminFinancials,
+  adminSetShippingPrice,
+} from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { ORDER_STATUSES, formatPrice, statusLabel, type OrderStatus } from "@/lib/cities";
 import { toast } from "sonner";
@@ -87,14 +104,47 @@ function OrdersPage() {
     return c;
   }, [orders]);
 
+  const { data: fin } = useQuery({
+    queryKey: ["admin-financials"],
+    queryFn: () => adminFinancials({ data: { token: requireToken() } }),
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Porositë</h1>
-        <p className="text-sm text-muted-foreground">
-          Të gjitha porositë live nga databaza.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Porositë</h1>
+          <p className="text-sm text-muted-foreground">
+            Të gjitha porositë live nga databaza.
+          </p>
+        </div>
+        <ShippingPriceEditor current={fin?.shippingPrice ?? 2} />
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <FinanceCard
+          label="Total Bruto (Xhiroja)"
+          value={formatPrice(fin?.gross ?? 0)}
+          sub={`${fin?.orders ?? 0} porosi`}
+          icon={TrendingUp}
+          color="bg-primary/10 text-primary"
+        />
+        <FinanceCard
+          label="Kostot e Postës"
+          value={formatPrice(fin?.shippingCosts ?? 0)}
+          sub={`${fin?.orders ?? 0} × ${formatPrice(fin?.shippingPrice ?? 0)}`}
+          icon={Truck}
+          color="bg-warning/15 text-warning-foreground"
+        />
+        <FinanceCard
+          label="Fitimi Neto (Para të Pastra)"
+          value={formatPrice(fin?.net ?? 0)}
+          sub="Bruto - Kostot e Postës"
+          icon={Wallet}
+          color="bg-success/15 text-success"
+        />
+      </div>
+
 
       <div className="flex flex-wrap gap-2">
         <FilterChip active={filter === "all"} onClick={() => setFilter("all")} count={counts.all}>
@@ -236,5 +286,99 @@ function FilterChip({
         {count}
       </span>
     </button>
+  );
+}
+
+function FinanceCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+}) {
+  return (
+    <div className="rounded-2xl border bg-card p-4 shadow-sm">
+      <div className={`mb-3 grid h-10 w-10 place-items-center rounded-xl ${color}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-bold">{value}</p>
+      {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function ShippingPriceEditor({ current }: { current: number }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(String(current.toFixed(2)));
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num < 0) {
+      toast.error("Çmim i pavlefshëm");
+      return;
+    }
+    setSaving(true);
+    try {
+      await adminSetShippingPrice({ data: { token: requireToken(), price: num } });
+      toast.success(`Çmimi i postës u përditësua në ${formatPrice(num)}`);
+      qc.invalidateQueries({ queryKey: ["admin-financials"] });
+      setOpen(false);
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setValue(String(current.toFixed(2)));
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" className="rounded-full">
+          <Settings className="mr-1 h-4 w-4" /> Edito Çmimin e Postës ({formatPrice(current)})
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Çmimi i Postës</DialogTitle>
+          <DialogDescription>
+            Ky çmim aplikohet automatikisht në checkout. Falas për porosi mbi 20.00 €.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="ship">Çmimi i ri (€)</Label>
+          <Input
+            id="ship"
+            type="number"
+            step="0.01"
+            min={0}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Anulo
+          </Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Duke ruajtur..." : "Ruaj"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
