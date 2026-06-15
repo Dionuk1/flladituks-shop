@@ -92,6 +92,7 @@ const productSchema = z.object({
   condition: z.string().max(50).optional(),
   stock: z.number().int().min(0).max(1_000_000).optional(),
   status: z.string().max(50).optional(),
+  shipping_cost: z.number().min(0).max(10_000).optional(),
 });
 
 export const adminInsertProducts = createServerFn({ method: "POST" })
@@ -110,6 +111,52 @@ export const adminInsertProducts = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("products").insert(data.products);
     if (error) throw new Error(error.message);
     return { inserted: data.products.length };
+  });
+
+export const adminListProducts = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const adminUpdateProductStatus = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string; status: "available" | "sold" }) =>
+    z
+      .object({
+        token: z.string(),
+        id: z.string().uuid(),
+        status: z.enum(["available", "sold"]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("products")
+      .update({ status: data.status })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteProduct = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string }) =>
+    z.object({ token: z.string(), id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("products").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 // =================== Settings (shipping price) ===================
