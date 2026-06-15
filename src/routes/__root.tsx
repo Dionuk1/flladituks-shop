@@ -77,18 +77,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "FlladituKS — Dyqani Online" },
+      { title: "Lovable App" },
       {
         name: "description",
         content:
           "FlladituKS — produktet më të reja me dërgesë në të gjithë Kosovën. Pagesa në dorë.",
       },
-      { property: "og:title", content: "FlladituKS — Dyqani Online" },
+      { property: "og:title", content: "Lovable App" },
       {
         property: "og:description",
         content: "Bli online me dorëzim të shpejtë në të gjithë Kosovën.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "Lovable App" },
+      { name: "description", content: "FlladituKS is a modern Albanian e-commerce web application for selling products online." },
+      { property: "og:description", content: "FlladituKS is a modern Albanian e-commerce web application for selling products online." },
+      { name: "twitter:description", content: "FlladituKS is a modern Albanian e-commerce web application for selling products online." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1d93c098-3b8a-4494-b90c-f13515270625/id-preview-47c219bc--6177c6b5-f807-4b19-9fb6-3db829df7606.lovable.app-1781530914503.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1d93c098-3b8a-4494-b90c-f13515270625/id-preview-47c219bc--6177c6b5-f807-4b19-9fb6-3db829df7606.lovable.app-1781530914503.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
