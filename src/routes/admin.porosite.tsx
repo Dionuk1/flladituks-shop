@@ -288,3 +288,97 @@ function FilterChip({
     </button>
   );
 }
+
+function FinanceCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+}) {
+  return (
+    <div className="rounded-2xl border bg-card p-4 shadow-sm">
+      <div className={`mb-3 grid h-10 w-10 place-items-center rounded-xl ${color}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-bold">{value}</p>
+      {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function ShippingPriceEditor({ current }: { current: number }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(String(current.toFixed(2)));
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num < 0) {
+      toast.error("Çmim i pavlefshëm");
+      return;
+    }
+    setSaving(true);
+    try {
+      await adminSetShippingPrice({ data: { token: requireToken(), price: num } });
+      toast.success(`Çmimi i postës u përditësua në ${formatPrice(num)}`);
+      qc.invalidateQueries({ queryKey: ["admin-financials"] });
+      setOpen(false);
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setValue(String(current.toFixed(2)));
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" className="rounded-full">
+          <Settings className="mr-1 h-4 w-4" /> Edito Çmimin e Postës ({formatPrice(current)})
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Çmimi i Postës</DialogTitle>
+          <DialogDescription>
+            Ky çmim aplikohet automatikisht në checkout. Falas për porosi mbi 20.00 €.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="ship">Çmimi i ri (€)</Label>
+          <Input
+            id="ship"
+            type="number"
+            step="0.01"
+            min={0}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Anulo
+          </Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Duke ruajtur..." : "Ruaj"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
