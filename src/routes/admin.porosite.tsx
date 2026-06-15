@@ -1,9 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Trash2, Phone, MapPin, Package2 } from "lucide-react";
+import { Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -11,7 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { adminListOrders, adminUpdateOrderStatus, adminDeleteOrder } from "@/lib/admin.functions";
+import {
+  adminListOrders,
+  adminUpdateOrderStatus,
+  adminDeleteOrder,
+  adminFinancials,
+  adminSetShippingPrice,
+} from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { ORDER_STATUSES, formatPrice, statusLabel, type OrderStatus } from "@/lib/cities";
 import { toast } from "sonner";
