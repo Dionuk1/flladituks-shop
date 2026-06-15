@@ -15,11 +15,13 @@ export type Product = {
   condition: string | null;
   stock: number;
   status: string;
+  shipping_cost?: number | null;
 };
 
 export function ProductCard({ product }: { product: Product }) {
   const { add, setOpen } = useCart();
-  const available = product.stock > 0 && product.status === "available";
+  const sold = product.status === "sold";
+  const available = !sold && product.stock > 0 && product.status === "available";
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition hover:shadow-lg">
@@ -48,13 +50,19 @@ export function ProductCard({ product }: { product: Product }) {
             </Badge>
           )}
         </div>
-        {!available && (
+        {sold ? (
+          <div className="absolute inset-0 grid place-items-center bg-background/70 backdrop-blur-sm">
+            <span className="rotate-[-8deg] rounded-md bg-destructive px-4 py-1.5 text-sm font-extrabold tracking-wider text-destructive-foreground shadow-lg">
+              E SHITUR
+            </span>
+          </div>
+        ) : !available ? (
           <div className="absolute inset-0 grid place-items-center bg-background/60 backdrop-blur-sm">
             <span className="rounded-full bg-destructive px-3 py-1 text-xs font-semibold text-destructive-foreground">
               Pa stok
             </span>
           </div>
-        )}
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
@@ -66,7 +74,7 @@ export function ProductCard({ product }: { product: Product }) {
           <div>
             <p className="text-lg font-bold text-primary">{formatPrice(product.price)}</p>
             <p className="text-xs text-muted-foreground">
-              {available ? `${product.stock} në stok` : "I padisponueshëm"}
+              {sold ? "E shitur" : available ? `${product.stock} në stok` : "I padisponueshëm"}
             </p>
           </div>
           <Button
@@ -84,7 +92,8 @@ export function ProductCard({ product }: { product: Product }) {
             }}
             className="rounded-full"
           >
-            <ShoppingCart className="mr-1 h-4 w-4" /> Shto
+            <ShoppingCart className="mr-1 h-4 w-4" />
+            {sold ? "Nuk ka stok" : "Shto"}
           </Button>
         </div>
       </div>

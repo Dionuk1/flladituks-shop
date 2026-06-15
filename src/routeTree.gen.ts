@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as PorosiaIdRouteImport } from './routes/porosia.$id'
 import { Route as AdminShtoRouteImport } from './routes/admin.shto'
+import { Route as AdminProduktetRouteImport } from './routes/admin.produktet'
 import { Route as AdminPorositeRouteImport } from './routes/admin.porosite'
 import { Route as AdminImportoRouteImport } from './routes/admin.importo'
 
@@ -42,6 +43,11 @@ const AdminShtoRoute = AdminShtoRouteImport.update({
   path: '/shto',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProduktetRoute = AdminProduktetRouteImport.update({
+  id: '/produktet',
+  path: '/produktet',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPorositeRoute = AdminPorositeRouteImport.update({
   id: '/porosite',
   path: '/porosite',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
+  '/admin/produktet': typeof AdminProduktetRoute
   '/admin/shto': typeof AdminShtoRoute
   '/porosia/$id': typeof PorosiaIdRoute
   '/admin/': typeof AdminIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
+  '/admin/produktet': typeof AdminProduktetRoute
   '/admin/shto': typeof AdminShtoRoute
   '/porosia/$id': typeof PorosiaIdRoute
   '/admin': typeof AdminIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
+  '/admin/produktet': typeof AdminProduktetRoute
   '/admin/shto': typeof AdminShtoRoute
   '/porosia/$id': typeof PorosiaIdRoute
   '/admin/': typeof AdminIndexRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/importo'
     | '/admin/porosite'
+    | '/admin/produktet'
     | '/admin/shto'
     | '/porosia/$id'
     | '/admin/'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/importo'
     | '/admin/porosite'
+    | '/admin/produktet'
     | '/admin/shto'
     | '/porosia/$id'
     | '/admin'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/importo'
     | '/admin/porosite'
+    | '/admin/produktet'
     | '/admin/shto'
     | '/porosia/$id'
     | '/admin/'
@@ -152,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminShtoRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/produktet': {
+      id: '/admin/produktet'
+      path: '/produktet'
+      fullPath: '/admin/produktet'
+      preLoaderRoute: typeof AdminProduktetRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/porosite': {
       id: '/admin/porosite'
       path: '/porosite'
@@ -172,6 +191,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminImportoRoute: typeof AdminImportoRoute
   AdminPorositeRoute: typeof AdminPorositeRoute
+  AdminProduktetRoute: typeof AdminProduktetRoute
   AdminShtoRoute: typeof AdminShtoRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -179,6 +199,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminImportoRoute: AdminImportoRoute,
   AdminPorositeRoute: AdminPorositeRoute,
+  AdminProduktetRoute: AdminProduktetRoute,
   AdminShtoRoute: AdminShtoRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock } from "lucide-react";
+import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock, Boxes } from "lucide-react";
 import { isAdmin, loginAdmin, logoutAdmin } from "@/lib/admin-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/admin")({
 const navItems = [
   { to: "/admin", label: "Përmbledhje", icon: Package, exact: true },
   { to: "/admin/shto", label: "Shto Produkt", icon: PlusCircle },
+  { to: "/admin/produktet", label: "Produktet", icon: Boxes },
   { to: "/admin/importo", label: "Importo Excel", icon: FileSpreadsheet },
   { to: "/admin/porosite", label: "Porositë", icon: ClipboardList },
 ];

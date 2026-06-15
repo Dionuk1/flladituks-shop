@@ -12,13 +12,20 @@ export const Route = createFileRoute("/admin/importo")({
   component: ImportPage,
 });
 
-const COLUMNS = ["Titulli", "Pershkrimi", "Cmimi", "FotoURL", "Kategoria", "Sasia", "Gjendja"];
+const COLUMNS = [
+  "Përshkrimi",
+  "Çmimi i shitjes",
+  "Kosto e Transportit",
+  "FotoURL",
+  "Kategoria",
+  "Sasia",
+];
 
 function downloadTemplate() {
   const ws = XLSX.utils.aoa_to_sheet([
     COLUMNS,
-    ["Bluzë verore", "Bluzë e lehtë për verë", 14.99, "https://example.com/foto.jpg", "Veshje", 10, "I ri"],
-    ["Këpucë sportive", "Këpucë komode për vrapim", 49.5, "https://example.com/kepuce.jpg", "Këpucë", 5, "I ri"],
+    ["Bluzë verore e lehtë", 14.99, 1.5, "https://example.com/foto.jpg", "Veshje", 10],
+    ["Këpucë sportive komode për vrapim", 49.5, 2.0, "https://example.com/kepuce.jpg", "Këpucë", 5],
   ]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Produktet");
@@ -26,6 +33,33 @@ function downloadTemplate() {
 }
 
 type Row = Record<string, any>;
+
+// Normalize header: trim, lowercase, strip diacritics, collapse spaces
+function norm(s: string) {
+  return String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function pick(row: Row, ...aliases: string[]): any {
+  const map: Record<string, any> = {};
+  for (const k of Object.keys(row)) map[norm(k)] = row[k];
+  for (const a of aliases) {
+    const v = map[norm(a)];
+    if (v !== undefined && v !== "") return v;
+  }
+  return undefined;
+}
+
+function toNumber(v: any): number {
+  if (v === undefined || v === null || v === "") return NaN;
+  const s = String(v).replace(/[€$\s]/g, "").replace(/,/g, ".");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
 
 function ImportPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -45,7 +79,7 @@ function ImportPage() {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json<Row>(ws, { defval: "" });
         setRows(json);
-        toast.success(`U lexuan ${json.length} rreshta`);
+        toast.success(`U lexuan ${json.length} rreshta nga ${file.name}`);
       } catch (err: any) {
         toast.error("Skedari nuk u lexua", { description: err.message });
       }
@@ -58,18 +92,27 @@ function ImportPage() {
     setImporting(true);
     const records = rows
       .map((r) => {
-        const title = String(r.Titulli || r.titulli || r.title || "").trim();
-        const price = Number(r.Cmimi || r.cmimi || r.price || 0);
-        if (!title || isNaN(price)) return null;
+        const desc = String(
+          pick(r, "Përshkrimi", "Pershkrimi", "Description", "Titulli", "Title") ?? "",
+        ).trim();
+        const price = toNumber(
+          pick(r, "Çmimi i shitjes", "Cmimi i shitjes", "Çmimi", "Cmimi", "Price"),
+        );
+        if (!desc || !Number.isFinite(price)) return null;
+        const shipping = toNumber(
+          pick(r, "Kosto e Transportit", "Kosto e transportit", "Shipping", "Transport"),
+        );
+        const stockRaw = toNumber(pick(r, "Sasia", "Stock", "Stoku"));
         return {
-          title,
-          description: String(r.Pershkrimi || r.pershkrimi || r.description || "").trim() || null,
+          title: desc.slice(0, 255),
+          description: desc,
           price,
-          image_url: String(r.FotoURL || r.fotourl || r.image_url || "").trim() || null,
-          category: String(r.Kategoria || r.kategoria || r.category || "").trim() || null,
-          stock: Number(r.Sasia || r.sasia || r.stock || 1),
-          condition: String(r.Gjendja || r.gjendja || r.condition || "I ri").trim(),
+          image_url: String(pick(r, "FotoURL", "Foto", "Image", "image_url") ?? "").trim() || null,
+          category: String(pick(r, "Kategoria", "Category") ?? "").trim() || null,
+          stock: Number.isFinite(stockRaw) ? Math.max(0, Math.floor(stockRaw)) : 1,
+          condition: "I ri",
           status: "available",
+          shipping_cost: Number.isFinite(shipping) && shipping > 0 ? shipping : 0,
         };
       })
       .filter(Boolean) as any[];
@@ -89,11 +132,13 @@ function ImportPage() {
     }
     setImporting(false);
     setResult({ inserted: records.length, skipped });
+    const src = fileName || "skedari Excel";
     setRows([]);
     setFileName("");
     qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["admin-products"] });
     qc.invalidateQueries({ queryKey: ["admin-stats"] });
-    toast.success(`${records.length} produkte u shtuan!`);
+    toast.success(`Importimi u krye me sukses! U shtuan ${records.length} produkte nga ${src}`);
   }
 
   return (
@@ -167,7 +212,7 @@ function ImportPage() {
                     <tr key={i} className="border-t">
                       {COLUMNS.map((c) => (
                         <td key={c} className="px-3 py-2 text-muted-foreground">
-                          {String(r[c] ?? r[c.toLowerCase()] ?? "")}
+                          {String(pick(r, c) ?? "")}
                         </td>
                       ))}
                     </tr>
