@@ -46,9 +46,10 @@ function AdminLayout() {
             </p>
           </div>
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (loginAdmin(password)) {
+              const ok = await loginAdmin(password);
+              if (ok) {
                 setAuthed(true);
                 toast.success("Mirë se erdhët!");
               } else {

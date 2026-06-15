@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Package, ShoppingBag, Clock, CheckCircle2, PlusCircle, FileSpreadsheet } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { adminStats, adminListOrders } from "@/lib/admin.functions";
+import { requireToken } from "@/lib/admin-auth";
 import { formatPrice, statusLabel } from "@/lib/cities";
 
 export const Route = createFileRoute("/admin/")({
@@ -11,31 +12,12 @@ export const Route = createFileRoute("/admin/")({
 function AdminDashboard() {
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],
-    queryFn: async () => {
-      const [products, orders] = await Promise.all([
-        supabase.from("products").select("id", { count: "exact", head: true }),
-        supabase.from("orders").select("status, total"),
-      ]);
-      const ords = orders.data ?? [];
-      return {
-        products: products.count ?? 0,
-        orders: ords.length,
-        newOrders: ords.filter((o) => o.status === "new").length,
-        revenue: ords.reduce((s, o) => s + Number(o.total ?? 0), 0),
-      };
-    },
+    queryFn: () => adminStats({ data: { token: requireToken() } }),
   });
 
   const { data: recent = [] } = useQuery({
     queryKey: ["admin-recent-orders"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      return data ?? [];
-    },
+    queryFn: () => adminListOrders({ data: { token: requireToken(), limit: 5 } }),
   });
 
   const cards = [

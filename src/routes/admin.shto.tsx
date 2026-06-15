@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORIES, CONDITIONS, formatPrice } from "@/lib/cities";
-import { supabase } from "@/integrations/supabase/client";
+import { adminInsertProducts } from "@/lib/admin.functions";
+import { requireToken } from "@/lib/admin-auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/shto")({
@@ -41,17 +42,23 @@ function AddProductPage() {
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Titulli është i nevojshëm");
       if (!form.price || Number(form.price) < 0) throw new Error("Çmim i pavlefshëm");
-      const { error } = await supabase.from("products").insert({
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        price: Number(form.price),
-        category: form.category || null,
-        condition: form.condition,
-        stock: Number(form.stock) || 0,
-        image_url: form.image_url.trim() || null,
-        status: "available",
+      await adminInsertProducts({
+        data: {
+          token: requireToken(),
+          products: [
+            {
+              title: form.title.trim(),
+              description: form.description.trim() || null,
+              price: Number(form.price),
+              category: form.category || null,
+              condition: form.condition,
+              stock: Number(form.stock) || 0,
+              image_url: form.image_url.trim() || null,
+              status: "available",
+            },
+          ],
+        },
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Produkti u shtua me sukses!");

@@ -3,7 +3,8 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { Download, Loader2, Upload, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { adminInsertProducts } from "@/lib/admin.functions";
+import { requireToken } from "@/lib/admin-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -79,12 +80,14 @@ function ImportPage() {
       toast.error("Asnjë rresht i vlefshëm për të importuar");
       return;
     }
-    const { error } = await supabase.from("products").insert(records);
-    setImporting(false);
-    if (error) {
-      toast.error("Importi dështoi", { description: error.message });
+    try {
+      await adminInsertProducts({ data: { token: requireToken(), products: records } });
+    } catch (e: any) {
+      setImporting(false);
+      toast.error("Importi dështoi", { description: e.message });
       return;
     }
+    setImporting(false);
     setResult({ inserted: records.length, skipped });
     setRows([]);
     setFileName("");
