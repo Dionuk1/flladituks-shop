@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Save, ImageOff } from "lucide-react";
+import { Loader2, Save, ImageOff, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORIES, CONDITIONS, formatPrice } from "@/lib/cities";
-import { adminInsertProducts } from "@/lib/admin.functions";
+import { adminInsertProducts, adminUploadProductImage } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { toast } from "sonner";
 
