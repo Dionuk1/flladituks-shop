@@ -142,7 +142,7 @@ export const adminSetShippingPrice = createServerFn({ method: "POST" })
     const rounded = Math.round(data.price * 100) / 100;
     const { error } = await supabaseAdmin
       .from("app_settings")
-      .upsert({ key: SHIPPING_KEY, value: rounded as unknown as object, updated_at: new Date().toISOString() });
+      .upsert({ key: SHIPPING_KEY, value: rounded, updated_at: new Date().toISOString() });
     if (error) throw new Error(error.message);
     return { price: rounded };
   });
