@@ -212,7 +212,7 @@ function ImportPage() {
                     <tr key={i} className="border-t">
                       {COLUMNS.map((c) => (
                         <td key={c} className="px-3 py-2 text-muted-foreground">
-                          {String(r[c] ?? r[c.toLowerCase()] ?? "")}
+                          {String(pick(r, c) ?? "")}
                         </td>
                       ))}
                     </tr>
