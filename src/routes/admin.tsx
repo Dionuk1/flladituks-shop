@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useRouterState, useNavigate, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock } from "lucide-react";
 import { isAdmin, loginAdmin, logoutAdmin } from "@/lib/admin-auth";
