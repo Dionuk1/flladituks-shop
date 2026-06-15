@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           address: string
@@ -25,6 +43,7 @@ export type Database = {
           notes: string | null
           payment_method: string
           phone: string
+          shipping_cost: number
           status: string
           total: number
         }
@@ -38,6 +57,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string
           phone: string
+          shipping_cost?: number
           status?: string
           total?: number
         }
@@ -51,6 +71,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string
           phone?: string
+          shipping_cost?: number
           status?: string
           total?: number
         }
