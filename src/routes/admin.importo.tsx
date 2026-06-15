@@ -3,7 +3,8 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { Download, Loader2, Upload, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { adminInsertProducts } from "@/lib/admin.functions";
+import { requireToken } from "@/lib/admin-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
