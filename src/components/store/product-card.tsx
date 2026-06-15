@@ -15,11 +15,13 @@ export type Product = {
   condition: string | null;
   stock: number;
   status: string;
+  shipping_cost?: number | null;
 };
 
 export function ProductCard({ product }: { product: Product }) {
   const { add, setOpen } = useCart();
-  const available = product.stock > 0 && product.status === "available";
+  const sold = product.status === "sold";
+  const available = !sold && product.stock > 0 && product.status === "available";
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition hover:shadow-lg">
