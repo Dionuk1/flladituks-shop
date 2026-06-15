@@ -35,8 +35,44 @@ const empty = {
 
 function AddProductPage() {
   const [form, setForm] = useState(empty);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  async function handleUpload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vetëm foto janë të lejuara");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Foto më e madhe se 5MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const buf = await file.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      const dataBase64 = btoa(binary);
+      const res = await adminUploadProductImage({
+        data: {
+          token: requireToken(),
+          filename: file.name,
+          contentType: file.type,
+          dataBase64,
+        },
+      });
+      set("image_url", res.url);
+      toast.success("Foto u ngarkua!");
+    } catch (e: any) {
+      toast.error("Ngarkimi dështoi", { description: e.message });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: async () => {
