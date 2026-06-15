@@ -201,11 +201,46 @@ export const adminFinancials = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertToken(data.token);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows } = await supabaseAdmin.from("orders").select("total");
     const shipping = await readShippingPriceServer();
-    const orders = rows ?? [];
-    const gross = orders.reduce((s, o: any) => s + Number(o.total ?? 0), 0);
-    const shippingCosts = orders.length * shipping;
+
+    const CONFIRMED = ["processing", "shipped", "completed"];
+    const { data: rows } = await supabaseAdmin
+      .from("orders")
+      .select("total, status, shipping_cost, items")
+      .in("status", CONFIRMED);
+    const orders = (rows ?? []) as Array<{
+      total: number;
+      status: string;
+      shipping_cost: number | null;
+      items: Array<{ id: string; quantity: number }>;
+    }>;
+
+    // Gather product ids referenced in confirmed orders to read per-product shipping costs
+    const ids = Array.from(
+      new Set(orders.flatMap((o) => (o.items ?? []).map((i) => i.id).filter(Boolean))),
+    );
+    let productShipping: Record<string, number> = {};
+    if (ids.length) {
+      const { data: prods } = await supabaseAdmin
+        .from("products")
+        .select("id, shipping_cost")
+        .in("id", ids);
+      for (const p of prods ?? []) {
+        const v = Number((p as any).shipping_cost ?? 0);
+        if (v > 0) productShipping[(p as any).id] = v;
+      }
+    }
+
+    const gross = orders.reduce((s, o) => s + Number(o.total ?? 0), 0);
+    const shippingCosts = orders.reduce((s, o) => {
+      const itemBased = (o.items ?? []).reduce(
+        (a, it) => a + (productShipping[it.id] ?? 0) * Number(it.quantity ?? 1),
+        0,
+      );
+      if (itemBased > 0) return s + itemBased;
+      return s + Number(o.shipping_cost ?? shipping);
+    }, 0);
+
     return {
       orders: orders.length,
       shippingPrice: shipping,
