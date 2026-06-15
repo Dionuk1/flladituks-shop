@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useCart } from "@/lib/cart";
 import { KOSOVO_CITIES, formatPrice } from "@/lib/cities";
-import { supabase } from "@/integrations/supabase/client";
+import { createOrder, getShippingPrice } from "@/lib/admin.functions";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -30,8 +31,11 @@ const schema = z.object({
   notes: z.string().max(500).optional(),
 });
 
+const FREE_SHIPPING_THRESHOLD = 20;
+
 export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
-  const { items, total, clear } = useCart();
+  const { items, total: itemsTotal, clear } = useCart();
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     customer_name: "",
     phone: "",
@@ -40,7 +44,14 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [shippingPrice, setShippingPrice] = useState(2.0);
+
+  useEffect(() => {
+    getShippingPrice().then((r) => setShippingPrice(r.price)).catch(() => {});
+  }, []);
+
+  const shippingCost = itemsTotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingPrice;
+  const total = itemsTotal + shippingCost;
 
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -56,48 +67,31 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.from("orders").insert({
-      customer_name: parsed.data.customer_name,
-      phone: parsed.data.phone,
-      city: parsed.data.city,
-      address: parsed.data.address,
-      notes: parsed.data.notes || null,
-      items: items.map((i) => ({
-        id: i.id,
-        title: i.title,
-        price: i.price,
-        quantity: i.quantity,
-      })),
-      total,
-      payment_method: "cash_on_delivery",
-      status: "new",
-    });
-    setSubmitting(false);
-    if (error) {
-      toast.error("Gabim gjatë porositjes", { description: error.message });
-      return;
-    }
-    setSuccess(true);
-    clear();
-    toast.success("Porosia u krye me sukses!", {
-      description: "Do t'ju kontaktojmë së shpejti për konfirmim.",
-    });
-    setTimeout(() => {
-      setSuccess(false);
+    try {
+      const res = await createOrder({
+        data: {
+          customer_name: parsed.data.customer_name,
+          phone: parsed.data.phone,
+          city: parsed.data.city,
+          address: parsed.data.address,
+          notes: parsed.data.notes || null,
+          items: items.map((i) => ({
+            id: i.id,
+            title: i.title,
+            price: i.price,
+            quantity: i.quantity,
+          })),
+        },
+      });
+      clear();
+      toast.success("Porosia u krye me sukses!");
       onDone();
-    }, 1800);
-  }
-
-  if (success) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-        <CheckCircle2 className="h-16 w-16 text-success" />
-        <h3 className="mt-4 text-xl font-bold">Porosia u krye me sukses!</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Faleminderit që zgjodhët FlladituKS. Do t'ju kontaktojmë së shpejti.
-        </p>
-      </div>
-    );
+      navigate({ to: "/porosia/$id", params: { id: res.id } });
+    } catch (err: any) {
+      toast.error("Gabim gjatë porositjes", { description: err?.message });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -181,8 +175,23 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         </div>
       </div>
 
-      <footer className="border-t bg-card p-5">
-        <div className="mb-3 flex items-center justify-between">
+      <footer className="space-y-2 border-t bg-card p-5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Nëntotali</span>
+          <span>{formatPrice(itemsTotal)}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Transporti</span>
+          <span className={shippingCost === 0 ? "font-semibold text-success" : ""}>
+            {shippingCost === 0 ? "Falas" : formatPrice(shippingCost)}
+          </span>
+        </div>
+        {itemsTotal <= FREE_SHIPPING_THRESHOLD && (
+          <p className="text-xs text-muted-foreground">
+            Transporti falas për porositë mbi {formatPrice(FREE_SHIPPING_THRESHOLD)}.
+          </p>
+        )}
+        <div className="flex items-center justify-between border-t pt-2">
           <span className="text-muted-foreground">Totali për pagesë</span>
           <span className="text-xl font-bold text-primary">{formatPrice(total)}</span>
         </div>

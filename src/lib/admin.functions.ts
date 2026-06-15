@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const ADMIN_PASSWORD = () => process.env.ADMIN_PASSWORD || "flladitu2026";
+const ADMIN_PASSWORD = () => process.env.ADMIN_PASSWORD || "flladituneser69";
 
 function assertToken(token: unknown) {
   if (typeof token !== "string" || token.length === 0 || token !== ADMIN_PASSWORD()) {
@@ -110,4 +110,168 @@ export const adminInsertProducts = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("products").insert(data.products);
     if (error) throw new Error(error.message);
     return { inserted: data.products.length };
+  });
+
+// =================== Settings (shipping price) ===================
+
+const SHIPPING_KEY = "shipping_price";
+const DEFAULT_SHIPPING = 2.0;
+
+async function readShippingPriceServer(): Promise<number> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", SHIPPING_KEY)
+    .maybeSingle();
+  const v = Number(data?.value ?? DEFAULT_SHIPPING);
+  return Number.isFinite(v) && v >= 0 ? v : DEFAULT_SHIPPING;
+}
+
+export const getShippingPrice = createServerFn({ method: "GET" }).handler(async () => {
+  return { price: await readShippingPriceServer() };
+});
+
+export const adminSetShippingPrice = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; price: number }) =>
+    z.object({ token: z.string(), price: z.number().min(0).max(1000) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const rounded = Math.round(data.price * 100) / 100;
+    const { error } = await supabaseAdmin
+      .from("app_settings")
+      .upsert({ key: SHIPPING_KEY, value: rounded as unknown as object, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return { price: rounded };
+  });
+
+// =================== Financials ===================
+
+export const adminFinancials = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin.from("orders").select("total");
+    const shipping = await readShippingPriceServer();
+    const orders = rows ?? [];
+    const gross = orders.reduce((s, o: any) => s + Number(o.total ?? 0), 0);
+    const shippingCosts = orders.length * shipping;
+    return {
+      orders: orders.length,
+      shippingPrice: shipping,
+      gross,
+      shippingCosts,
+      net: gross - shippingCosts,
+    };
+  });
+
+// =================== Public order operations ===================
+
+const orderItemSchema = z.object({
+  id: z.string(),
+  title: z.string().max(255),
+  price: z.number().min(0).max(1_000_000),
+  quantity: z.number().int().min(1).max(1000),
+});
+
+export const createOrder = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      customer_name: string;
+      phone: string;
+      city: string;
+      address: string;
+      notes?: string | null;
+      items: Array<z.infer<typeof orderItemSchema>>;
+    }) =>
+      z
+        .object({
+          customer_name: z.string().trim().min(2).max(120),
+          phone: z
+            .string()
+            .trim()
+            .min(6)
+            .max(20)
+            .regex(/^[0-9 +\-()]+$/),
+          city: z.string().min(1).max(80),
+          address: z.string().trim().min(4).max(255),
+          notes: z.string().max(500).nullable().optional(),
+          items: z.array(orderItemSchema).min(1).max(100),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const itemsTotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const shippingPrice = await readShippingPriceServer();
+    const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
+    const total = itemsTotal + shippingCost;
+
+    const { data: row, error } = await supabaseAdmin
+      .from("orders")
+      .insert({
+        customer_name: data.customer_name,
+        phone: data.phone,
+        city: data.city,
+        address: data.address,
+        notes: data.notes || null,
+        items: data.items,
+        total,
+        shipping_cost: shippingCost,
+        payment_method: "cash_on_delivery",
+        status: "new",
+      })
+      .select("id")
+      .single();
+    if (error || !row) throw new Error(error?.message ?? "Gabim te porosia");
+    return { id: row.id };
+  });
+
+export const getOrderById = createServerFn({ method: "GET" })
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("orders")
+      .select(
+        "id, customer_name, phone, city, address, items, total, shipping_cost, status, notes, created_at, payment_method",
+      )
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Porosia nuk u gjet");
+    return row;
+  });
+
+// =================== Image upload ===================
+
+export const adminUploadProductImage = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; filename: string; contentType: string; dataBase64: string }) =>
+    z
+      .object({
+        token: z.string(),
+        filename: z.string().min(1).max(255),
+        contentType: z
+          .string()
+          .regex(/^image\/(png|jpe?g|webp|gif|avif)$/i, "Lloji i skedarit i palejuar"),
+        dataBase64: z.string().min(1).max(15_000_000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const buf = Buffer.from(data.dataBase64, "base64");
+    if (buf.length > 5 * 1024 * 1024) throw new Error("Foto më e madhe se 5MB");
+    const ext = data.filename.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `products/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabaseAdmin.storage
+      .from("product-images")
+      .upload(path, buf, { contentType: data.contentType, upsert: false });
+    if (error) throw new Error(error.message);
+    const { data: pub } = supabaseAdmin.storage.from("product-images").getPublicUrl(path);
+    return { url: pub.publicUrl };
   });
