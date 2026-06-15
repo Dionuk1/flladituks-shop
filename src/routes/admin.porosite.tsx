@@ -40,11 +40,7 @@ function OrdersPage() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      const data = await adminListOrders({ data: { token: requireToken() } });
       return (data ?? []) as unknown as Order[];
     },
   });
@@ -55,23 +51,25 @@ function OrdersPage() {
   );
 
   async function updateStatus(id: string, status: string) {
-    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-    if (error) toast.error("Gabim", { description: error.message });
-    else {
+    try {
+      await adminUpdateOrderStatus({ data: { token: requireToken(), id, status } });
       toast.success("Statusi u përditësua");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["admin-stats"] });
       qc.invalidateQueries({ queryKey: ["admin-recent-orders"] });
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
     }
   }
 
   async function deleteOrder(id: string) {
     if (!confirm("Të fshihet kjo porosi?")) return;
-    const { error } = await supabase.from("orders").delete().eq("id", id);
-    if (error) toast.error("Gabim", { description: error.message });
-    else {
+    try {
+      await adminDeleteOrder({ data: { token: requireToken(), id } });
       toast.success("Porosia u fshi");
       qc.invalidateQueries({ queryKey: ["orders"] });
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
     }
   }
 
