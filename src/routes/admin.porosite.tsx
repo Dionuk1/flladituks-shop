@@ -104,14 +104,47 @@ function OrdersPage() {
     return c;
   }, [orders]);
 
+  const { data: fin } = useQuery({
+    queryKey: ["admin-financials"],
+    queryFn: () => adminFinancials({ data: { token: requireToken() } }),
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Porositë</h1>
-        <p className="text-sm text-muted-foreground">
-          Të gjitha porositë live nga databaza.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Porositë</h1>
+          <p className="text-sm text-muted-foreground">
+            Të gjitha porositë live nga databaza.
+          </p>
+        </div>
+        <ShippingPriceEditor current={fin?.shippingPrice ?? 2} />
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <FinanceCard
+          label="Total Bruto (Xhiroja)"
+          value={formatPrice(fin?.gross ?? 0)}
+          sub={`${fin?.orders ?? 0} porosi`}
+          icon={TrendingUp}
+          color="bg-primary/10 text-primary"
+        />
+        <FinanceCard
+          label="Kostot e Postës"
+          value={formatPrice(fin?.shippingCosts ?? 0)}
+          sub={`${fin?.orders ?? 0} × ${formatPrice(fin?.shippingPrice ?? 0)}`}
+          icon={Truck}
+          color="bg-warning/15 text-warning-foreground"
+        />
+        <FinanceCard
+          label="Fitimi Neto (Para të Pastra)"
+          value={formatPrice(fin?.net ?? 0)}
+          sub="Bruto - Kostot e Postës"
+          icon={Wallet}
+          color="bg-success/15 text-success"
+        />
+      </div>
+
 
       <div className="flex flex-wrap gap-2">
         <FilterChip active={filter === "all"} onClick={() => setFilter("all")} count={counts.all}>
