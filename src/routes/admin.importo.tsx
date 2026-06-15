@@ -80,12 +80,14 @@ function ImportPage() {
       toast.error("Asnjë rresht i vlefshëm për të importuar");
       return;
     }
-    const { error } = await supabase.from("products").insert(records);
-    setImporting(false);
-    if (error) {
-      toast.error("Importi dështoi", { description: error.message });
+    try {
+      await adminInsertProducts({ data: { token: requireToken(), products: records } });
+    } catch (e: any) {
+      setImporting(false);
+      toast.error("Importi dështoi", { description: e.message });
       return;
     }
+    setImporting(false);
     setResult({ inserted: records.length, skipped });
     setRows([]);
     setFileName("");
