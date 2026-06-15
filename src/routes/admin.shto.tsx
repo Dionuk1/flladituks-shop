@@ -203,16 +203,49 @@ function AddProductPage() {
           </div>
 
           <div>
-            <Label htmlFor="img">URL e Fotos</Label>
+            <Label>Foto e produktit</Label>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="rounded-full"
+              >
+                {uploading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                Ngarko Foto
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+              />
+              {form.image_url && (
+                <button
+                  type="button"
+                  onClick={() => set("image_url", "")}
+                  className="text-xs text-muted-foreground hover:text-destructive"
+                >
+                  Hiq foton
+                </button>
+              )}
+            </div>
             <Input
               id="img"
               type="url"
               value={form.image_url}
               onChange={(e) => set("image_url", e.target.value)}
-              placeholder="https://..."
+              placeholder="ose ngjit një URL: https://..."
+              className="mt-2"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Ngjit një URL të fotos nga interneti.
+              Ngarko nga pajisja jote ose ngjit një URL nga interneti.
             </p>
           </div>
 
