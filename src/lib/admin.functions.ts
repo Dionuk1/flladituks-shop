@@ -63,6 +63,36 @@ export const adminUpdateOrderStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertToken(data.token);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // If completing the order, decrement stock and auto-mark sold when depleted
+    if (data.status === "completed") {
+      const { data: order } = await supabaseAdmin
+        .from("orders")
+        .select("items, status")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (order && order.status !== "completed") {
+        const items = (order.items ?? []) as Array<{ id: string; quantity: number }>;
+        const ids = Array.from(new Set(items.map((i) => i.id).filter(Boolean)));
+        if (ids.length) {
+          const { data: prods } = await supabaseAdmin
+            .from("products")
+            .select("id, stock")
+            .in("id", ids);
+          const byId: Record<string, number> = {};
+          for (const p of prods ?? []) byId[(p as any).id] = Number((p as any).stock ?? 0);
+          for (const it of items) {
+            const qty = Number(it.quantity ?? 1);
+            const current = byId[it.id] ?? 0;
+            const next = Math.max(0, current - qty);
+            const update: any = { stock: next };
+            if (next === 0) update.status = "sold";
+            await supabaseAdmin.from("products").update(update).eq("id", it.id);
+          }
+        }
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from("orders")
       .update({ status: data.status })
@@ -87,7 +117,9 @@ const productSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().max(5000).nullable().optional(),
   price: z.number().min(0).max(1_000_000),
+  old_price: z.number().min(0).max(1_000_000).nullable().optional(),
   image_url: z.string().url().max(2000).nullable().optional(),
+  images: z.array(z.string().url().max(2000)).max(3).optional(),
   category: z.string().max(100).nullable().optional(),
   condition: z.string().max(50).optional(),
   stock: z.number().int().min(0).max(1_000_000).optional(),
