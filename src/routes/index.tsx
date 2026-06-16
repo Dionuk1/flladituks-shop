@@ -41,6 +41,8 @@ function Storefront() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [maxPrice, setMaxPrice] = useState<string>("");
+  const [hideSold, setHideSold] = useState(true);
+  const [onlyDeals, setOnlyDeals] = useState(false);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
@@ -50,19 +52,21 @@ function Storefront() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Product[];
+      return data as unknown as Product[];
     },
   });
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
+      if (hideSold && p.status === "sold") return false;
+      if (onlyDeals && !discountPercent(p.price, p.old_price)) return false;
       if (q && !`${p.title} ${p.description ?? ""}`.toLowerCase().includes(q.toLowerCase()))
         return false;
       if (category !== "all" && p.category !== category) return false;
       if (maxPrice && Number(p.price) > Number(maxPrice)) return false;
       return true;
     });
-  }, [products, q, category, maxPrice]);
+  }, [products, q, category, maxPrice, hideSold, onlyDeals]);
 
   return (
     <div className="min-h-screen bg-background">
