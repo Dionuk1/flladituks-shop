@@ -191,6 +191,48 @@ export const adminDeleteProduct = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminUpdateProduct = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: { token: string; id: string; product: z.infer<typeof productSchema> }) =>
+      z
+        .object({
+          token: z.string(),
+          id: z.string().uuid(),
+          product: productSchema,
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Read current price to handle automatic discount: if new price < current, push current -> old_price
+    const { data: existing } = await supabaseAdmin
+      .from("products")
+      .select("price, old_price")
+      .eq("id", data.id)
+      .maybeSingle();
+
+    const patch: any = { ...data.product };
+    if (existing) {
+      const currentPrice = Number((existing as any).price ?? 0);
+      const newPrice = Number(data.product.price);
+      if (Number.isFinite(newPrice) && newPrice < currentPrice) {
+        patch.old_price = currentPrice;
+      } else if (data.product.old_price === null) {
+        patch.old_price = null;
+      }
+    }
+    // Normalize images: dedupe + drop empties + cap 3
+    if (Array.isArray(patch.images)) {
+      patch.images = Array.from(new Set(patch.images.filter((u: string) => u && u.trim()))).slice(0, 3);
+      if (!patch.image_url && patch.images[0]) patch.image_url = patch.images[0];
+    }
+
+    const { error } = await supabaseAdmin.from("products").update(patch).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 // =================== Settings (shipping price) ===================
 
 const SHIPPING_KEY = "shipping_price";
