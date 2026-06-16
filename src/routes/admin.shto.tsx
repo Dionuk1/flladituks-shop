@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Save, ImageOff, Upload } from "lucide-react";
+import { Loader2, Save, ImageOff, Upload, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,8 @@ export const Route = createFileRoute("/admin/shto")({
   component: AddProductPage,
 });
 
+const MAX_IMAGES = 3;
+
 const empty = {
   title: "",
   description: "",
@@ -30,54 +32,111 @@ const empty = {
   category: "",
   condition: "I ri",
   stock: "1",
-  image_url: "",
 };
+
+type ImgSlot = { id: string; preview: string; url: string | null; uploading: boolean };
+
+function makeId() {
+  return Math.random().toString(36).slice(2);
+}
 
 function AddProductPage() {
   const [form, setForm] = useState(empty);
-  const [uploading, setUploading] = useState(false);
+  const [images, setImages] = useState<ImgSlot[]>([]);
+  const [urlInput, setUrlInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
-  async function handleUpload(file: File) {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Vetëm foto janë të lejuara");
+  // Revoke object URLs on unmount
+  useEffect(() => {
+    return () => {
+      for (const img of images) {
+        if (img.preview.startsWith("blob:")) URL.revokeObjectURL(img.preview);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleFiles(files: FileList) {
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) {
+      toast.error(`Maksimumi ${MAX_IMAGES} foto`);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Foto më e madhe se 5MB");
-      return;
+    const list = Array.from(files).slice(0, remaining);
+    for (const file of list) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Vetëm foto janë të lejuara");
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Foto më e madhe se 5MB");
+        continue;
+      }
+      const id = makeId();
+      const preview = URL.createObjectURL(file);
+      setImages((p) => [...p, { id, preview, url: null, uploading: true }]);
+      try {
+        const buf = await file.arrayBuffer();
+        let binary = "";
+        const bytes = new Uint8Array(buf);
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        const dataBase64 = btoa(binary);
+        const res = await adminUploadProductImage({
+          data: {
+            token: requireToken(),
+            filename: file.name,
+            contentType: file.type,
+            dataBase64,
+          },
+        });
+        setImages((p) =>
+          p.map((s) => (s.id === id ? { ...s, url: res.url, uploading: false } : s)),
+        );
+      } catch (e: any) {
+        toast.error("Ngarkimi dështoi", { description: e.message });
+        setImages((p) => p.filter((s) => s.id !== id));
+        URL.revokeObjectURL(preview);
+      }
     }
-    setUploading(true);
-    try {
-      const buf = await file.arrayBuffer();
-      let binary = "";
-      const bytes = new Uint8Array(buf);
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      const dataBase64 = btoa(binary);
-      const res = await adminUploadProductImage({
-        data: {
-          token: requireToken(),
-          filename: file.name,
-          contentType: file.type,
-          dataBase64,
-        },
-      });
-      set("image_url", res.url);
-      toast.success("Foto u ngarkua!");
-    } catch (e: any) {
-      toast.error("Ngarkimi dështoi", { description: e.message });
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
+    if (fileRef.current) fileRef.current.value = "";
   }
+
+  function addUrl() {
+    const u = urlInput.trim();
+    if (!u) return;
+    if (images.length >= MAX_IMAGES) {
+      toast.error(`Maksimumi ${MAX_IMAGES} foto`);
+      return;
+    }
+    try {
+      new URL(u);
+    } catch {
+      toast.error("URL e pavlefshme");
+      return;
+    }
+    setImages((p) => [...p, { id: makeId(), preview: u, url: u, uploading: false }]);
+    setUrlInput("");
+  }
+
+  function removeImage(id: string) {
+    setImages((p) => {
+      const img = p.find((s) => s.id === id);
+      if (img && img.preview.startsWith("blob:")) URL.revokeObjectURL(img.preview);
+      return p.filter((s) => s.id !== id);
+    });
+  }
+
+  const previewUrl = images[0]?.preview ?? null;
+  const uploadingAny = images.some((i) => i.uploading);
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Titulli është i nevojshëm");
       if (!form.price || Number(form.price) < 0) throw new Error("Çmim i pavlefshëm");
+      if (uploadingAny) throw new Error("Prit deri sa fotot të ngarkohen");
+      const urls = images.map((i) => i.url).filter((u): u is string => !!u);
       await adminInsertProducts({
         data: {
           token: requireToken(),
@@ -89,7 +148,8 @@ function AddProductPage() {
               category: form.category || null,
               condition: form.condition,
               stock: Number(form.stock) || 0,
-              image_url: form.image_url.trim() || null,
+              image_url: urls[0] ?? null,
+              images: urls,
               status: "available",
             },
           ],
@@ -98,8 +158,14 @@ function AddProductPage() {
     },
     onSuccess: () => {
       toast.success("Produkti u shtua me sukses!");
+      for (const img of images) {
+        if (img.preview.startsWith("blob:")) URL.revokeObjectURL(img.preview);
+      }
       setForm(empty);
+      setImages([]);
+      setUrlInput("");
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
       qc.invalidateQueries({ queryKey: ["admin-stats"] });
     },
     onError: (e: Error) => toast.error("Gabim", { description: e.message }),
@@ -203,55 +269,86 @@ function AddProductPage() {
           </div>
 
           <div>
-            <Label>Foto e produktit</Label>
+            <Label>Foto e produktit (deri në {MAX_IMAGES})</Label>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => fileRef.current?.click()}
-                disabled={uploading}
+                disabled={images.length >= MAX_IMAGES}
                 className="rounded-full"
               >
-                {uploading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
+                <Upload className="mr-2 h-4 w-4" />
                 Ngarko Foto
               </Button>
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+                onChange={(e) => e.target.files && handleFiles(e.target.files)}
               />
-              {form.image_url && (
-                <button
-                  type="button"
-                  onClick={() => set("image_url", "")}
-                  className="text-xs text-muted-foreground hover:text-destructive"
-                >
-                  Hiq foton
-                </button>
-              )}
+              <span className="text-xs text-muted-foreground">
+                {images.length}/{MAX_IMAGES}
+              </span>
             </div>
-            <Input
-              id="img"
-              type="url"
-              value={form.image_url}
-              onChange={(e) => set("image_url", e.target.value)}
-              placeholder="ose ngjit një URL: https://..."
-              className="mt-2"
-            />
+
+            {images.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {images.map((img, i) => (
+                  <div
+                    key={img.id}
+                    className="relative h-20 w-20 overflow-hidden rounded-lg border bg-secondary"
+                  >
+                    <img src={img.preview} alt="" className="h-full w-full object-cover" />
+                    {img.uploading && (
+                      <div className="absolute inset-0 grid place-items-center bg-background/70">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    )}
+                    {i === 0 && (
+                      <span className="absolute bottom-0 left-0 right-0 bg-primary/90 text-center text-[10px] font-semibold text-primary-foreground">
+                        Kryesore
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeImage(img.id)}
+                      className="absolute right-0.5 top-0.5 grid h-5 w-5 place-items-center rounded-full bg-destructive text-destructive-foreground shadow"
+                      aria-label="Hiq"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 flex gap-2">
+              <Input
+                type="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="ose ngjit URL: https://..."
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addUrl}
+                disabled={!urlInput.trim() || images.length >= MAX_IMAGES}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Ngarko nga pajisja jote ose ngjit një URL nga interneti.
+              Ngarko nga pajisja jote ose ngjit URL — foto e parë është kryesore.
             </p>
           </div>
 
           <Button
             type="submit"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || uploadingAny}
             className="w-full rounded-full"
             size="lg"
           >
@@ -268,12 +365,11 @@ function AddProductPage() {
           <p className="text-sm font-medium text-muted-foreground">Paraqitje paraprake</p>
           <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
             <div className="relative aspect-square bg-secondary">
-              {form.image_url ? (
+              {previewUrl ? (
                 <img
-                  src={form.image_url}
+                  src={previewUrl}
                   alt={form.title || "Produkt"}
                   className="h-full w-full object-cover"
-                  onError={(e) => ((e.currentTarget.style.display = "none"))}
                 />
               ) : (
                 <div className="grid h-full w-full place-items-center text-muted-foreground">
@@ -300,7 +396,7 @@ function AddProductPage() {
               </p>
               <div className="flex items-end justify-between pt-2">
                 <div>
-                  <p className="text-lg font-bold text-primary">
+                  <p className="whitespace-nowrap text-lg font-bold text-primary">
                     {formatPrice(form.price || 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">
