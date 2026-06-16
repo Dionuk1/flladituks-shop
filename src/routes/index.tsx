@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Truck, ShieldCheck, Banknote, Search, SlidersHorizontal } from "lucide-react";
+import { Truck, ShieldCheck, Banknote, Search, SlidersHorizontal, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StoreHeader } from "@/components/store/store-header";
 import { CartDrawer } from "@/components/store/cart-drawer";
-import { ProductCard, type Product } from "@/components/store/product-card";
+import { ProductCard, discountPercent, type Product } from "@/components/store/product-card";
 import { CATEGORIES } from "@/lib/cities";
 import {
   Select,
@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/")({
   head: () => ({
