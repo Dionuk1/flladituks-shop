@@ -96,6 +96,26 @@ function Storefront() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOnlyDeals((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+              onlyDeals
+                ? "border-destructive bg-destructive text-destructive-foreground"
+                : "bg-card hover:bg-secondary"
+            }`}
+          >
+            <Flame className="h-4 w-4" /> Me Zbritje
+          </button>
+          <div className="ml-auto flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 shadow-sm">
+            <Switch id="hide-sold" checked={hideSold} onCheckedChange={setHideSold} />
+            <Label htmlFor="hide-sold" className="cursor-pointer text-sm">
+              Fshih produktet e shitura
+            </Label>
+          </div>
+        </div>
+
         <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm">
           <div className="flex flex-1 items-center gap-2 rounded-xl bg-secondary/60 px-3">
             <Search className="h-4 w-4 text-muted-foreground" />
