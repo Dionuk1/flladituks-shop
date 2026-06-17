@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Package, ShoppingBag, Clock, CheckCircle2, PlusCircle, FileSpreadsheet } from "lucide-react";
-import { adminStats, adminListOrders } from "@/lib/admin.functions";
+import { Package, ShoppingBag, Clock, CheckCircle2, PlusCircle, FileSpreadsheet, Flame } from "lucide-react";
+import { adminStats, adminListOrders, adminTopSelling } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { formatPrice, statusLabel } from "@/lib/cities";
 
