@@ -53,10 +53,14 @@ function InvoicePage() {
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Te dyqani
           </Link>
-          <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full">
-            <Printer className="mr-1 h-4 w-4" /> Printo
-          </Button>
-        </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportInvoiceToPDF(data as any)} className="rounded-full">
+              <FileDown className="mr-1 h-4 w-4" /> Shkarko Faturën (PDF)
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full">
+              <Printer className="mr-1 h-4 w-4" /> Printo
+            </Button>
+          </div>
 
         <div className="overflow-hidden rounded-2xl border bg-card shadow-sm print:shadow-none">
           <div className="gradient-brand p-6 text-white">
