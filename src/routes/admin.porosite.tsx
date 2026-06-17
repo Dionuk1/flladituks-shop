@@ -1,36 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings } from "lucide-react";
+import {
+  Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings,
+  FileSpreadsheet, FileText, MessageCircle, AlertTriangle, Send, Download, FileDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  adminListOrders,
-  adminUpdateOrderStatus,
-  adminDeleteOrder,
-  adminFinancials,
-  adminSetShippingPrice,
+  adminListOrders, adminUpdateOrderStatus, adminDeleteOrder, adminFinancials,
+  adminSetShippingPrice, adminRejectedPhones, adminSetTrackingNumber,
 } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { ORDER_STATUSES, formatPrice, statusLabel, type OrderStatus } from "@/lib/cities";
+import { exportOrdersToExcel, exportFinancialsToPDF, exportInvoiceToPDF, buildWhatsAppLink } from "@/lib/exports";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/porosite")({
@@ -45,8 +40,10 @@ type Order = {
   address: string;
   items: Array<{ id: string; title: string; price: number; quantity: number }>;
   total: number;
+  shipping_cost: number;
   status: OrderStatus | string;
   notes: string | null;
+  tracking_number: string | null;
   created_at: string;
 };
 
