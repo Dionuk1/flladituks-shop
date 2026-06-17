@@ -414,7 +414,7 @@ export const getOrderById = createServerFn({ method: "GET" })
     const { data: row, error } = await supabaseAdmin
       .from("orders")
       .select(
-        "id, customer_name, phone, city, address, items, total, shipping_cost, status, notes, created_at, payment_method",
+        "id, customer_name, phone, city, address, items, total, shipping_cost, status, notes, created_at, payment_method, tracking_number",
       )
       .eq("id", data.id)
       .maybeSingle();
