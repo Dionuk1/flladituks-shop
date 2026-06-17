@@ -96,7 +96,20 @@ function InvoicePage() {
               <p className="text-xs font-medium uppercase text-muted-foreground">Pagesa</p>
               <p className="mt-1 text-sm">💵 Në dorë (Cash on Delivery)</p>
             </div>
+            {data.tracking_number && (
+              <div className="sm:col-span-2">
+                <p className="text-xs font-medium uppercase text-muted-foreground">Numri i Fletëgarkesës</p>
+                <a
+                  href={`https://www.postakosoves.com/?s=${encodeURIComponent(data.tracking_number)}`}
+                  target="_blank" rel="noreferrer"
+                  className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                >
+                  <Truck className="h-4 w-4" /> {data.tracking_number}
+                </a>
+              </div>
+            )}
           </div>
+
 
           <div className="border-t p-6">
             <p className="mb-3 text-sm font-semibold">Të dhënat e dërgesës</p>
