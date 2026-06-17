@@ -452,3 +452,60 @@ export const adminUploadProductImage = createServerFn({ method: "POST" })
     const { data: pub } = supabaseAdmin.storage.from("product-images").getPublicUrl(path);
     return { url: pub.publicUrl };
   });
+
+// =================== Tracking number ===================
+
+export const adminSetTrackingNumber = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string; tracking: string }) =>
+    z.object({
+      token: z.string(),
+      id: z.string().uuid(),
+      tracking: z.string().max(100),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const value = data.tracking.trim() || null;
+    const { error } = await supabaseAdmin
+      .from("orders").update({ tracking_number: value }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// =================== Top selling products ===================
+
+export const adminTopSelling = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; limit?: number }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("orders").select("items").eq("status", "completed");
+    const totals: Record<string, { id: string; title: string; quantity: number; revenue: number }> = {};
+    for (const r of rows ?? []) {
+      const items = ((r as any).items ?? []) as Array<{ id: string; title: string; price: number; quantity: number }>;
+      for (const it of items) {
+        const key = it.id || it.title;
+        if (!totals[key]) totals[key] = { id: it.id, title: it.title, quantity: 0, revenue: 0 };
+        totals[key].quantity += Number(it.quantity ?? 1);
+        totals[key].revenue += Number(it.price ?? 0) * Number(it.quantity ?? 1);
+      }
+    }
+    return Object.values(totals)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, data.limit ?? 5);
+  });
+
+// =================== Rejected phone numbers (blacklist) ===================
+
+export const adminRejectedPhones = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("orders").select("phone").eq("status", "rejected");
+    const set = Array.from(new Set((rows ?? []).map((r: any) => String(r.phone ?? "").replace(/\s+/g, ""))));
+    return set;
+  });
