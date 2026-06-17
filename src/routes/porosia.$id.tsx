@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft, FileDown, Truck } from "lucide-react";
 import { getOrderById } from "@/lib/admin.functions";
 import { formatPrice, statusLabel } from "@/lib/cities";
+import { exportInvoiceToPDF } from "@/lib/exports";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/porosia/$id")({
