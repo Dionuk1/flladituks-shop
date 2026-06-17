@@ -61,6 +61,9 @@ function InvoicePage() {
               <Printer className="mr-1 h-4 w-4" /> Printo
             </Button>
           </div>
+        </div>
+
+
 
         <div className="overflow-hidden rounded-2xl border bg-card shadow-sm print:shadow-none">
           <div className="gradient-brand p-6 text-white">
