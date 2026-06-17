@@ -20,6 +20,13 @@ function AdminDashboard() {
     queryFn: () => adminListOrders({ data: { token: requireToken(), limit: 5 } }),
   });
 
+  const { data: topSelling = [] } = useQuery({
+    queryKey: ["admin-top-selling"],
+    queryFn: () => adminTopSelling({ data: { token: requireToken(), limit: 5 } }),
+  });
+
+
+
   const cards = [
     { label: "Produkte", value: stats?.products ?? 0, icon: Package, color: "bg-primary/10 text-primary" },
     { label: "Porosi gjithsej", value: stats?.orders ?? 0, icon: ShoppingBag, color: "bg-accent text-accent-foreground" },
