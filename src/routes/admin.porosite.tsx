@@ -1,36 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings } from "lucide-react";
+import {
+  Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings,
+  FileSpreadsheet, FileText, MessageCircle, AlertTriangle, Send, Download, FileDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  adminListOrders,
-  adminUpdateOrderStatus,
-  adminDeleteOrder,
-  adminFinancials,
-  adminSetShippingPrice,
+  adminListOrders, adminUpdateOrderStatus, adminDeleteOrder, adminFinancials,
+  adminSetShippingPrice, adminRejectedPhones, adminSetTrackingNumber,
 } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { ORDER_STATUSES, formatPrice, statusLabel, type OrderStatus } from "@/lib/cities";
+import { exportOrdersToExcel, exportFinancialsToPDF, exportInvoiceToPDF, buildWhatsAppLink } from "@/lib/exports";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/porosite")({
@@ -45,8 +40,10 @@ type Order = {
   address: string;
   items: Array<{ id: string; title: string; price: number; quantity: number }>;
   total: number;
+  shipping_cost: number;
   status: OrderStatus | string;
   notes: string | null;
+  tracking_number: string | null;
   created_at: string;
 };
 
@@ -67,16 +64,39 @@ function OrdersPage() {
     [orders, filter],
   );
 
-  async function updateStatus(id: string, status: string) {
+  // State for the rejection reason modal
+  const [rejectTarget, setRejectTarget] = useState<Order | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  async function updateStatus(id: string, status: string, reason?: string) {
     try {
-      await adminUpdateOrderStatus({ data: { token: requireToken(), id, status } });
-      toast.success("Statusi u përditësua");
+      await adminUpdateOrderStatus({ data: { token: requireToken(), id, status, reason } });
+      toast.success(status === "rejected" ? "Porosia u shënua si Refuzuar" : "Statusi u përditësua");
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["admin-stats"] });
       qc.invalidateQueries({ queryKey: ["admin-recent-orders"] });
+      qc.invalidateQueries({ queryKey: ["admin-financials"] });
+      qc.invalidateQueries({ queryKey: ["rejected-phones"] });
+      qc.invalidateQueries({ queryKey: ["admin-top-selling"] });
     } catch (e: any) {
       toast.error("Gabim", { description: e.message });
     }
+  }
+
+  function handleStatusChange(o: Order, status: string) {
+    if (status === "rejected" && o.status !== "rejected") {
+      setRejectTarget(o);
+      setRejectReason("");
+      return;
+    }
+    updateStatus(o.id, status);
+  }
+
+  async function confirmReject() {
+    if (!rejectTarget) return;
+    await updateStatus(rejectTarget.id, "rejected", rejectReason);
+    setRejectTarget(null);
+    setRejectReason("");
   }
 
   async function deleteOrder(id: string) {
@@ -109,23 +129,48 @@ function OrdersPage() {
     queryFn: () => adminFinancials({ data: { token: requireToken() } }),
   });
 
+  const { data: rejectedPhones = [] } = useQuery({
+    queryKey: ["rejected-phones"],
+    queryFn: () => adminRejectedPhones({ data: { token: requireToken() } }),
+  });
+  const rejectedSet = useMemo(() => new Set(rejectedPhones.map((p) => p.replace(/\s+/g, ""))), [rejectedPhones]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Porositë</h1>
-          <p className="text-sm text-muted-foreground">
-            Të gjitha porositë live nga databaza.
-          </p>
+          <p className="text-sm text-muted-foreground">Të gjitha porositë live nga databaza.</p>
         </div>
-        <ShippingPriceEditor current={fin?.shippingPrice ?? 2} />
+        <div className="flex flex-wrap gap-2">
+          <ShippingPriceEditor current={fin?.shippingPrice ?? 2} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="rounded-full">
+                <Download className="mr-1 h-4 w-4" /> Eksporto Raportin
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportOrdersToExcel(orders, fin)}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Shkarko në Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  fin && exportFinancialsToPDF({ ...fin }, orders)
+                }
+              >
+                <FileText className="mr-2 h-4 w-4" /> Shkarko në PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <FinanceCard
           label="Total Bruto (Xhiroja)"
           value={formatPrice(fin?.gross ?? 0)}
-          sub={`${fin?.orders ?? 0} porosi`}
+          sub={`${fin?.orders ?? 0} porosi të konfirmuara`}
           icon={TrendingUp}
           color="bg-primary/10 text-primary"
         />
@@ -139,12 +184,11 @@ function OrdersPage() {
         <FinanceCard
           label="Fitimi Neto (Para të Pastra)"
           value={formatPrice(fin?.net ?? 0)}
-          sub="Bruto - Kostot e Postës"
+          sub="Pa porositë e refuzuara"
           icon={Wallet}
           color="bg-success/15 text-success"
         />
       </div>
-
 
       <div className="flex flex-wrap gap-2">
         <FilterChip active={filter === "all"} onClick={() => setFilter("all")} count={counts.all}>
@@ -170,89 +214,160 @@ function OrdersPage() {
         </div>
       ) : (
         <ul className="space-y-3">
-          {filtered.map((o) => (
-            <li key={o.id} className="rounded-2xl border bg-card p-4 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold">{o.customer_name}</h3>
-                    <Badge variant="outline" className="rounded-full text-xs">
-                      {statusLabel(o.status)}
-                    </Badge>
+          {filtered.map((o) => {
+            const isRisky = rejectedSet.has(String(o.phone).replace(/\s+/g, "")) && o.status !== "rejected";
+            return (
+              <li key={o.id} className="rounded-2xl border bg-card p-4 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold">{o.customer_name}</h3>
+                      <Badge variant="outline" className="rounded-full text-xs">
+                        {statusLabel(o.status)}
+                      </Badge>
+                      {isRisky && (
+                        <Badge className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive text-xs">
+                          <AlertTriangle className="mr-1 h-3 w-3" /> Klient me rrezik (Ka porosi të refuzuar)
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="h-3.5 w-3.5" /> {o.phone}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5" /> {o.city} · {o.address}
+                      </span>
+                      <span>{new Date(o.created_at).toLocaleString("sq")}</span>
+                    </div>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5" /> {o.phone}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" /> {o.city} · {o.address}
-                    </span>
-                    <span>{new Date(o.created_at).toLocaleString("sq")}</span>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary">{formatPrice(o.total)}</p>
+                    <p className="text-xs text-muted-foreground">Pagesa në dorë</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-primary">{formatPrice(o.total)}</p>
-                  <p className="text-xs text-muted-foreground">Pagesa në dorë</p>
-                </div>
-              </div>
 
-              <div className="mt-3 rounded-xl bg-secondary/40 p-3">
-                <p className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                  <Package2 className="h-3.5 w-3.5" /> Artikujt
-                </p>
-                <ul className="space-y-1 text-sm">
-                  {o.items?.map((it, i) => (
-                    <li key={i} className="flex justify-between">
-                      <span>
-                        {it.quantity}× {it.title}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {formatPrice(it.price * it.quantity)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {o.notes && (
-                  <p className="mt-2 border-t pt-2 text-xs text-muted-foreground">
-                    Shënim: {o.notes}
+                <div className="mt-3 rounded-xl bg-secondary/40 p-3">
+                  <p className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    <Package2 className="h-3.5 w-3.5" /> Artikujt
                   </p>
-                )}
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Select value={o.status} onValueChange={(v) => updateStatus(o.id, v)}>
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ORDER_STATUSES.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>
-                        {s.label}
-                      </SelectItem>
+                  <ul className="space-y-1 text-sm">
+                    {o.items?.map((it, i) => (
+                      <li key={i} className="flex justify-between">
+                        <span>{it.quantity}× {it.title}</span>
+                        <span className="text-muted-foreground">{formatPrice(it.price * it.quantity)}</span>
+                      </li>
                     ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyForPost(o)}
-                  className="rounded-full"
-                >
-                  <Copy className="mr-1 h-4 w-4" /> Kopjo për Postën
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteOrder(o.id)}
-                  className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Trash2 className="mr-1 h-4 w-4" /> Fshij
-                </Button>
-              </div>
-            </li>
-          ))}
+                  </ul>
+                  {o.notes && (
+                    <p className="mt-2 whitespace-pre-wrap border-t pt-2 text-xs text-muted-foreground">
+                      Shënim: {o.notes}
+                    </p>
+                  )}
+                </div>
+
+                <TrackingEditor order={o} />
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Select value={o.status} onValueChange={(v) => handleStatusChange(o, v)}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ORDER_STATUSES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="sm" onClick={() => copyForPost(o)} className="rounded-full">
+                    <Copy className="mr-1 h-4 w-4" /> Kopjo për Postën
+                  </Button>
+                  <Button
+                    variant="outline" size="sm" asChild
+                    className="rounded-full border-green-600 text-green-700 hover:bg-green-50"
+                  >
+                    <a href={buildWhatsAppLink(o)} target="_blank" rel="noreferrer">
+                      <MessageCircle className="mr-1 h-4 w-4" /> Njofto në WhatsApp
+                    </a>
+                  </Button>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => exportInvoiceToPDF(o)}
+                    className="rounded-full"
+                  >
+                    <FileDown className="mr-1 h-4 w-4" /> Faturë PDF
+                  </Button>
+                  <Button
+                    variant="ghost" size="sm" onClick={() => deleteOrder(o.id)}
+                    className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="mr-1 h-4 w-4" /> Fshij
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
+
+      <Dialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Refuzo porosinë</DialogTitle>
+            <DialogDescription>
+              Shëno një arsye të shkurtër. Stoku i produkteve do të kthehet automatikisht në dispozicion.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reject-reason">Arsyeja</Label>
+            <Textarea
+              id="reject-reason"
+              placeholder="p.sh. Nuk u lajmërua në telefon"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRejectTarget(null)}>Anulo</Button>
+            <Button variant="destructive" onClick={confirmReject}>
+              <Send className="mr-1 h-4 w-4" /> Konfirmo Refuzimin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function TrackingEditor({ order }: { order: Order }) {
+  const qc = useQueryClient();
+  const [value, setValue] = useState(order.tracking_number ?? "");
+  const [saving, setSaving] = useState(false);
+  async function save() {
+    setSaving(true);
+    try {
+      await adminSetTrackingNumber({ data: { token: requireToken(), id: order.id, tracking: value } });
+      toast.success("Numri i fletëgarkesës u ruajt");
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <Label className="text-xs text-muted-foreground">Numri i Fletëgarkesës (Tracking):</Label>
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="p.sh. POSTA-123456"
+        className="h-8 w-48"
+      />
+      <Button size="sm" variant="outline" onClick={save} disabled={saving || value === (order.tracking_number ?? "")}>
+        {saving ? "Duke ruajtur..." : "Ruaj"}
+      </Button>
     </div>
   );
 }

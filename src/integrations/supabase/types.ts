@@ -46,6 +46,7 @@ export type Database = {
           shipping_cost: number
           status: string
           total: number
+          tracking_number: string | null
         }
         Insert: {
           address: string
@@ -60,6 +61,7 @@ export type Database = {
           shipping_cost?: number
           status?: string
           total?: number
+          tracking_number?: string | null
         }
         Update: {
           address?: string
@@ -74,6 +76,7 @@ export type Database = {
           shipping_cost?: number
           status?: string
           total?: number
+          tracking_number?: string | null
         }
         Relationships: []
       }

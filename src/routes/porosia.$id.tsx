@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft, FileDown, Truck } from "lucide-react";
 import { getOrderById } from "@/lib/admin.functions";
 import { formatPrice, statusLabel } from "@/lib/cities";
+import { exportInvoiceToPDF } from "@/lib/exports";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/porosia/$id")({
@@ -52,10 +53,17 @@ function InvoicePage() {
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Te dyqani
           </Link>
-          <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full">
-            <Printer className="mr-1 h-4 w-4" /> Printo
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportInvoiceToPDF(data as any)} className="rounded-full">
+              <FileDown className="mr-1 h-4 w-4" /> Shkarko Faturën (PDF)
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full">
+              <Printer className="mr-1 h-4 w-4" /> Printo
+            </Button>
+          </div>
         </div>
+
+
 
         <div className="overflow-hidden rounded-2xl border bg-card shadow-sm print:shadow-none">
           <div className="gradient-brand p-6 text-white">
@@ -88,7 +96,20 @@ function InvoicePage() {
               <p className="text-xs font-medium uppercase text-muted-foreground">Pagesa</p>
               <p className="mt-1 text-sm">💵 Në dorë (Cash on Delivery)</p>
             </div>
+            {data.tracking_number && (
+              <div className="sm:col-span-2">
+                <p className="text-xs font-medium uppercase text-muted-foreground">Numri i Fletëgarkesës</p>
+                <a
+                  href={`https://www.postakosoves.com/?s=${encodeURIComponent(data.tracking_number)}`}
+                  target="_blank" rel="noreferrer"
+                  className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                >
+                  <Truck className="h-4 w-4" /> {data.tracking_number}
+                </a>
+              </div>
+            )}
           </div>
+
 
           <div className="border-t p-6">
             <p className="mb-3 text-sm font-semibold">Të dhënat e dërgesës</p>

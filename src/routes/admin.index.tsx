@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Package, ShoppingBag, Clock, CheckCircle2, PlusCircle, FileSpreadsheet } from "lucide-react";
-import { adminStats, adminListOrders } from "@/lib/admin.functions";
+import { Package, ShoppingBag, Clock, CheckCircle2, PlusCircle, FileSpreadsheet, Flame } from "lucide-react";
+import { adminStats, adminListOrders, adminTopSelling } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { formatPrice, statusLabel } from "@/lib/cities";
 
@@ -19,6 +19,13 @@ function AdminDashboard() {
     queryKey: ["admin-recent-orders"],
     queryFn: () => adminListOrders({ data: { token: requireToken(), limit: 5 } }),
   });
+
+  const { data: topSelling = [] } = useQuery({
+    queryKey: ["admin-top-selling"],
+    queryFn: () => adminTopSelling({ data: { token: requireToken(), limit: 5 } }),
+  });
+
+
 
   const cards = [
     { label: "Produkte", value: stats?.products ?? 0, icon: Package, color: "bg-primary/10 text-primary" },
@@ -94,6 +101,37 @@ function AdminDashboard() {
                 <div className="text-right">
                   <p className="font-semibold text-primary">{formatPrice(o.total)}</p>
                   <p className="text-xs text-muted-foreground">{statusLabel(o.status)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="rounded-2xl border bg-card shadow-sm">
+        <div className="flex items-center justify-between border-b p-4">
+          <h2 className="flex items-center gap-2 font-semibold">
+            <Flame className="h-4 w-4 text-orange-500" /> Produktet më të Shitura
+          </h2>
+          <span className="text-xs text-muted-foreground">vetëm porositë e përfunduara</span>
+        </div>
+        {topSelling.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            Ende pa shitje të përfunduara.
+          </p>
+        ) : (
+          <ul className="divide-y">
+            {topSelling.map((p, i) => (
+              <li key={p.id || p.title} className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    {i + 1}
+                  </span>
+                  <p className="font-medium">{p.title}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{p.quantity} copë</p>
+                  <p className="text-xs text-muted-foreground">{formatPrice(p.revenue)}</p>
                 </div>
               </li>
             ))}
