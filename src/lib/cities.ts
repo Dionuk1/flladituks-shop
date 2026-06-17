@@ -57,6 +57,7 @@ export const ORDER_STATUSES = [
   { value: "processing", label: "Në proces" },
   { value: "shipped", label: "E dërguar" },
   { value: "completed", label: "E përfunduar" },
+  { value: "rejected", label: "Refuzuar" },
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number]["value"];
