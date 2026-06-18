@@ -41,7 +41,7 @@ export function discountPercent(price: number, oldPrice?: number | null): number
 }
 
 export function ProductCard({ product }: { product: Product }) {
-  const { add, setOpen } = useCart();
+  const { add, setOpen, items } = useCart();
   const [detailOpen, setDetailOpen] = useState(false);
   const sold = product.status === "sold";
   const available = !sold && product.stock > 0 && product.status === "available";
