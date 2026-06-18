@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingCart, ImageOff, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ShoppingCart, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -41,7 +41,7 @@ export function discountPercent(price: number, oldPrice?: number | null): number
 }
 
 export function ProductCard({ product }: { product: Product }) {
-  const { add, setOpen } = useCart();
+  const { add, setOpen, items } = useCart();
   const [detailOpen, setDetailOpen] = useState(false);
   const sold = product.status === "sold";
   const available = !sold && product.stock > 0 && product.status === "available";
@@ -51,11 +51,18 @@ export function ProductCard({ product }: { product: Product }) {
 
   function handleAdd(e?: React.MouseEvent) {
     e?.stopPropagation();
+    const stockNum = Number(product.stock ?? 0);
+    const inCart = items.find((i) => i.id === product.id)?.quantity ?? 0;
+    if (!available || stockNum <= 0 || inCart >= stockNum) {
+      toast.error("Nuk ka më shumë sasi në stok për këtë produkt!");
+      return;
+    }
     add({
       id: product.id,
       title: product.title,
       price: Number(product.price),
       image_url: cover,
+      stock: stockNum,
     });
     toast.success("U shtua në shportë", { description: product.title });
     setOpen(true);
@@ -255,14 +262,6 @@ function ProductDetailDialog({
                 -{discount}%
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-background/90 shadow hover:bg-background sm:hidden"
-              aria-label="Mbyll"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
 
           <div className="flex flex-col gap-3 p-5">

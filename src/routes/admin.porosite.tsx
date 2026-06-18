@@ -22,6 +22,7 @@ import {
 import {
   adminListOrders, adminUpdateOrderStatus, adminDeleteOrder, adminFinancials,
   adminSetShippingPrice, adminRejectedPhones, adminSetTrackingNumber,
+  getNotificationEmail, adminSetNotificationEmail,
 } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { ORDER_STATUSES, formatPrice, statusLabel, type OrderStatus } from "@/lib/cities";
@@ -143,6 +144,7 @@ function OrdersPage() {
           <p className="text-sm text-muted-foreground">Të gjitha porositë live nga databaza.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <NotificationEmailEditor />
           <ShippingPriceEditor current={fin?.shippingPrice ?? 2} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -491,6 +493,84 @@ function ShippingPriceEditor({ current }: { current: number }) {
           </Button>
           <Button onClick={save} disabled={saving}>
             {saving ? "Duke ruajtur..." : "Ruaj"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NotificationEmailEditor() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data } = useQuery({
+    queryKey: ["notification-email"],
+    queryFn: () => getNotificationEmail(),
+  });
+  const current = data?.email ?? null;
+
+  async function save() {
+    const value = email.trim();
+    if (!value || !/^\S+@\S+\.\S+$/.test(value)) {
+      toast.error("Email i pavlefshëm");
+      return;
+    }
+    setSaving(true);
+    try {
+      await adminSetNotificationEmail({ data: { token: requireToken(), email: value } });
+      toast.success("Email-i për njoftime u ruajt me sukses!");
+      qc.invalidateQueries({ queryKey: ["notification-email"] });
+      setOpen(false);
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setEmail(current ?? "");
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" className="rounded-full">
+          <Send className="mr-1 h-4 w-4" />
+          {current ? `Njoftime: ${current}` : "Shto Email për Njoftime"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Email për njoftime të porosive</DialogTitle>
+          <DialogDescription>
+            Çdo porosi e re do të dërgohet automatikisht në këtë adresë (përmes EmailJS).
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          {current && (
+            <p className="text-xs text-muted-foreground">
+              Email-i aktual: <span className="font-medium text-foreground">{current}</span>
+            </p>
+          )}
+          <Label htmlFor="notify-email">Email-i</Label>
+          <Input
+            id="notify-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="njoftimet@shembull.com"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Anulo</Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Duke ruajtur..." : "Shto Email për Njoftime"}
           </Button>
         </DialogFooter>
       </DialogContent>
