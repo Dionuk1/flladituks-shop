@@ -509,3 +509,37 @@ export const adminRejectedPhones = createServerFn({ method: "POST" })
     const set = Array.from(new Set((rows ?? []).map((r: any) => String(r.phone ?? "").replace(/\s+/g, ""))));
     return set;
   });
+
+// =================== Notification email (EmailJS recipient) ===================
+
+const NOTIFY_EMAIL_KEY = "notification_email";
+
+async function readNotificationEmailServer(): Promise<string | null> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", NOTIFY_EMAIL_KEY)
+    .maybeSingle();
+  const v = data?.value;
+  if (typeof v === "string" && v.trim()) return v.trim();
+  return null;
+}
+
+export const getNotificationEmail = createServerFn({ method: "GET" }).handler(async () => {
+  return { email: await readNotificationEmailServer() };
+});
+
+export const adminSetNotificationEmail = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; email: string }) =>
+    z.object({ token: z.string(), email: z.string().trim().email("Email i pavlefshëm").max(255) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("app_settings")
+      .upsert({ key: NOTIFY_EMAIL_KEY, value: data.email, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return { email: data.email };
+  });
