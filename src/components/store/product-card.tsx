@@ -255,14 +255,6 @@ function ProductDetailDialog({
                 -{discount}%
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-background/90 shadow hover:bg-background sm:hidden"
-              aria-label="Mbyll"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
 
           <div className="flex flex-col gap-3 p-5">
