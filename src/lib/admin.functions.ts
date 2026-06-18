@@ -446,10 +446,10 @@ export const adminUploadProductImage = createServerFn({ method: "POST" })
     const ext = data.filename.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const path = `products/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabaseAdmin.storage
-      .from("product-images")
+      .from("flladituks-images")
       .upload(path, buf, { contentType: data.contentType, upsert: false });
     if (error) throw new Error(error.message);
-    const { data: pub } = supabaseAdmin.storage.from("product-images").getPublicUrl(path);
+    const { data: pub } = supabaseAdmin.storage.from("flladituks-images").getPublicUrl(path);
     return { url: pub.publicUrl };
   });
 
