@@ -51,13 +51,19 @@ export function ProductCard({ product }: { product: Product }) {
 
   function handleAdd(e?: React.MouseEvent) {
     e?.stopPropagation();
+    const stockNum = Number(product.stock ?? 0);
+    if (!available || stockNum <= 0) {
+      toast.error("Nuk ka më shumë sasi në stok për këtë produkt!");
+      return;
+    }
     add({
       id: product.id,
       title: product.title,
       price: Number(product.price),
       image_url: cover,
-      stock: Number(product.stock ?? 0),
+      stock: stockNum,
     });
+    toast.success("U shtua në shportë", { description: product.title });
     setOpen(true);
   }
 
