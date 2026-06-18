@@ -56,8 +56,8 @@ export function ProductCard({ product }: { product: Product }) {
       title: product.title,
       price: Number(product.price),
       image_url: cover,
+      stock: Number(product.stock ?? 0),
     });
-    toast.success("U shtua në shportë", { description: product.title });
     setOpen(true);
   }
 
