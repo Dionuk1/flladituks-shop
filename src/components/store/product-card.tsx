@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingCart, ImageOff, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ShoppingCart, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
