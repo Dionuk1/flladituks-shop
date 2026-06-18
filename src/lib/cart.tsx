@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 
 export type CartItem = {
   id: string;
@@ -6,6 +7,7 @@ export type CartItem = {
   price: number;
   image_url: string | null;
   quantity: number;
+  stock?: number;
 };
 
 type CartContextValue = {
@@ -22,6 +24,8 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = "flladituks_cart";
+
+const OUT_OF_STOCK_MSG = "Nuk ka më shumë sasi në stok për këtë produkt!";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -51,18 +55,48 @@ export function CartProvider({ children }: { children: ReactNode }) {
       count,
       add: (item, qty = 1) =>
         setItems((prev) => {
+          const stockLimit =
+            typeof item.stock === "number" && item.stock >= 0 ? item.stock : Infinity;
+          if (stockLimit <= 0) {
+            toast.error(OUT_OF_STOCK_MSG);
+            return prev;
+          }
           const existing = prev.find((p) => p.id === item.id);
+          const currentQty = existing?.quantity ?? 0;
+          const nextQty = currentQty + qty;
+          if (nextQty > stockLimit) {
+            toast.error(OUT_OF_STOCK_MSG);
+            if (currentQty >= stockLimit) return prev;
+            const capped = stockLimit;
+            return existing
+              ? prev.map((p) => (p.id === item.id ? { ...p, quantity: capped, stock: stockLimit } : p))
+              : [...prev, { ...item, quantity: capped, stock: stockLimit }];
+          }
           if (existing) {
             return prev.map((p) =>
-              p.id === item.id ? { ...p, quantity: p.quantity + qty } : p,
+              p.id === item.id
+                ? { ...p, quantity: nextQty, stock: stockLimit === Infinity ? p.stock : stockLimit }
+                : p,
             );
           }
-          return [...prev, { ...item, quantity: qty }];
+          return [
+            ...prev,
+            { ...item, quantity: qty, stock: stockLimit === Infinity ? undefined : stockLimit },
+          ];
         }),
       remove: (id) => setItems((prev) => prev.filter((p) => p.id !== id)),
       updateQty: (id, qty) =>
         setItems((prev) =>
-          prev.map((p) => (p.id === id ? { ...p, quantity: Math.max(1, qty) } : p)),
+          prev.map((p) => {
+            if (p.id !== id) return p;
+            const wanted = Math.max(1, qty);
+            const limit = typeof p.stock === "number" ? p.stock : Infinity;
+            if (wanted > limit) {
+              toast.error(OUT_OF_STOCK_MSG);
+              return { ...p, quantity: Math.min(limit, p.quantity) };
+            }
+            return { ...p, quantity: wanted };
+          }),
         ),
       clear: () => setItems([]),
     };
