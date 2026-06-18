@@ -144,6 +144,7 @@ function OrdersPage() {
           <p className="text-sm text-muted-foreground">Të gjitha porositë live nga databaza.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <NotificationEmailEditor />
           <ShippingPriceEditor current={fin?.shippingPrice ?? 2} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
