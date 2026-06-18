@@ -15,6 +15,7 @@ import {
 import { useCart } from "@/lib/cart";
 import { KOSOVO_CITIES, formatPrice } from "@/lib/cities";
 import { createOrder, getShippingPrice } from "@/lib/admin.functions";
+import { sendOrderNotification } from "@/lib/email-notify";
 import { toast } from "sonner";
 import { z } from "zod";
 
