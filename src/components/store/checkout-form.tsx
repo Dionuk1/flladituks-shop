@@ -86,6 +86,23 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
       });
       clear();
       toast.success("Porosia u krye me sukses!");
+      // Fire-and-forget email notification to admin (won't block redirect).
+      sendOrderNotification({
+        orderId: res.id,
+        customerName: parsed.data.customer_name,
+        phone: parsed.data.phone,
+        city: parsed.data.city,
+        address: parsed.data.address,
+        notes: parsed.data.notes || null,
+        items: items.map((i) => ({
+          id: i.id,
+          title: i.title,
+          price: i.price,
+          quantity: i.quantity,
+        })),
+        total,
+        shippingCost,
+      }).catch(() => {});
       onDone();
       navigate({ to: "/porosia/$id", params: { id: res.id } });
     } catch (err: any) {
