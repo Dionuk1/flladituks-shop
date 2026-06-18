@@ -52,7 +52,8 @@ export function ProductCard({ product }: { product: Product }) {
   function handleAdd(e?: React.MouseEvent) {
     e?.stopPropagation();
     const stockNum = Number(product.stock ?? 0);
-    if (!available || stockNum <= 0) {
+    const inCart = items.find((i) => i.id === product.id)?.quantity ?? 0;
+    if (!available || stockNum <= 0 || inCart >= stockNum) {
       toast.error("Nuk ka më shumë sasi në stok për këtë produkt!");
       return;
     }
