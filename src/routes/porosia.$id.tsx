@@ -187,6 +187,25 @@ function InvoicePage() {
                 <span className="text-xl font-bold text-primary">{formatPrice(data.total)}</span>
               </div>
             </div>
+
+            {canCancel && (
+              <div className="mt-5 border-t pt-5 print:hidden">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                  className="w-full rounded-full"
+                  size="lg"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  {cancelling ? "Duke anuluar..." : "Anulo Porosinë"}
+                </Button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">
+                  Mund ta anuloni vetëm përderisa porosia nuk është nisur ende.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
