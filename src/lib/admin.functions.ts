@@ -33,7 +33,7 @@ export const adminStats = createServerFn({ method: "POST" })
     return {
       products: products.count ?? 0,
       orders: ords.length,
-      newOrders: ords.filter((o) => o.status === "new").length,
+      newOrders: ords.filter((o) => o.status === "pending" || o.status === "new").length,
       revenue: ords.reduce((s, o) => s + Number(o.total ?? 0), 0),
     };
   });
@@ -49,6 +49,48 @@ export const adminListOrders = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+// Statuses where the order is considered to be holding reserved stock.
+// Stock is decremented at order creation and only restored when the order
+// transitions to one of the released statuses below.
+const RELEASED_STATUSES = new Set(["rejected", "cancelled"]);
+
+async function restockItems(items: Array<{ id: string; quantity: number }>) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const ids = Array.from(new Set(items.map((i) => i.id).filter(Boolean)));
+  if (!ids.length) return;
+  const { data: prods } = await supabaseAdmin
+    .from("products").select("id, stock, status").in("id", ids);
+  const byId: Record<string, { stock: number; status: string }> = {};
+  for (const p of prods ?? [])
+    byId[(p as any).id] = { stock: Number((p as any).stock ?? 0), status: (p as any).status };
+  for (const it of items) {
+    const cur = byId[it.id];
+    if (!cur) continue;
+    const qty = Number(it.quantity ?? 1);
+    const nextStock = cur.stock + qty;
+    const update: any = { stock: nextStock };
+    if (cur.status === "sold" && nextStock > 0) update.status = "available";
+    await supabaseAdmin.from("products").update(update).eq("id", it.id);
+  }
+}
+
+async function decrementStockForOrder(items: Array<{ id: string; quantity: number }>) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const ids = Array.from(new Set(items.map((i) => i.id).filter(Boolean)));
+  if (!ids.length) return;
+  const { data: prods } = await supabaseAdmin
+    .from("products").select("id, stock").in("id", ids);
+  const byId: Record<string, number> = {};
+  for (const p of prods ?? []) byId[(p as any).id] = Number((p as any).stock ?? 0);
+  for (const it of items) {
+    const current = byId[it.id] ?? 0;
+    const next = Math.max(0, current - Number(it.quantity ?? 1));
+    const update: any = { stock: next };
+    if (next === 0) update.status = "sold";
+    await supabaseAdmin.from("products").update(update).eq("id", it.id);
+  }
+}
 
 export const adminUpdateOrderStatus = createServerFn({ method: "POST" })
   .inputValidator((d: { token: string; id: string; status: string; reason?: string }) =>
@@ -70,50 +112,25 @@ export const adminUpdateOrderStatus = createServerFn({ method: "POST" })
       .select("items, status, notes")
       .eq("id", data.id)
       .maybeSingle();
-    const prevStatus = order?.status;
+    const prevStatus = order?.status ?? "";
     const items = ((order?.items ?? []) as Array<{ id: string; quantity: number }>);
-    const ids = Array.from(new Set(items.map((i) => i.id).filter(Boolean)));
 
-    // Completing the order: decrement stock, mark sold when depleted
-    if (data.status === "completed" && prevStatus !== "completed" && ids.length) {
-      const { data: prods } = await supabaseAdmin
-        .from("products").select("id, stock").in("id", ids);
-      const byId: Record<string, number> = {};
-      for (const p of prods ?? []) byId[(p as any).id] = Number((p as any).stock ?? 0);
-      for (const it of items) {
-        const current = byId[it.id] ?? 0;
-        const next = Math.max(0, current - Number(it.quantity ?? 1));
-        const update: any = { stock: next };
-        if (next === 0) update.status = "sold";
-        await supabaseAdmin.from("products").update(update).eq("id", it.id);
-      }
+    const wasReleased = RELEASED_STATUSES.has(prevStatus);
+    const willRelease = RELEASED_STATUSES.has(data.status);
+
+    // Releasing reserved stock (was holding stock, now rejected/cancelled)
+    if (willRelease && !wasReleased) {
+      await restockItems(items);
     }
-
-    // Rejecting the order: if previously decremented stock (i.e. completed), restore it
-    // and re-mark sold products as available.
-    if (data.status === "rejected" && prevStatus !== "rejected" && ids.length) {
-      const wasCompleted = prevStatus === "completed";
-      const { data: prods } = await supabaseAdmin
-        .from("products").select("id, stock, status").in("id", ids);
-      const byId: Record<string, { stock: number; status: string }> = {};
-      for (const p of prods ?? [])
-        byId[(p as any).id] = { stock: Number((p as any).stock ?? 0), status: (p as any).status };
-      for (const it of items) {
-        const cur = byId[it.id];
-        if (!cur) continue;
-        const qty = Number(it.quantity ?? 1);
-        const update: any = {};
-        if (wasCompleted) update.stock = cur.stock + qty;
-        if (cur.status === "sold") update.status = "available";
-        if (Object.keys(update).length)
-          await supabaseAdmin.from("products").update(update).eq("id", it.id);
-      }
+    // Reactivating a previously released order — re-decrement stock
+    if (!willRelease && wasReleased) {
+      await decrementStockForOrder(items);
     }
 
     const patch: any = { status: data.status };
     if (data.reason && data.reason.trim()) {
       const prevNotes = (order?.notes ?? "").toString();
-      const tag = `[Refuzuar: ${data.reason.trim()}]`;
+      const tag = `[${data.status === "rejected" ? "Refuzuar" : "Anuluar"}: ${data.reason.trim()}]`;
       patch.notes = prevNotes ? `${prevNotes}\n${tag}` : tag;
     }
 
@@ -129,7 +146,33 @@ export const adminDeleteOrder = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertToken(data.token);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Restock if the order was still holding stock
+    const { data: order } = await supabaseAdmin
+      .from("orders").select("items, status").eq("id", data.id).maybeSingle();
+    if (order && !RELEASED_STATUSES.has((order as any).status ?? "")) {
+      await restockItems(((order as any).items ?? []) as Array<{ id: string; quantity: number }>);
+    }
     const { error } = await supabaseAdmin.from("orders").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Customer cancellation (public — keyed by order id which is an unguessable UUID).
+// Only allowed while order is still in "pending" or "processing".
+export const cancelOrderByCustomer = createServerFn({ method: "POST" })
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: order } = await supabaseAdmin
+      .from("orders").select("items, status").eq("id", data.id).maybeSingle();
+    if (!order) throw new Error("Porosia nuk u gjet");
+    const status = ((order as any).status ?? "") as string;
+    if (!["pending", "new", "processing"].includes(status)) {
+      throw new Error("Kjo porosi nuk mund të anulohet më");
+    }
+    await restockItems(((order as any).items ?? []) as Array<{ id: string; quantity: number }>);
+    const { error } = await supabaseAdmin
+      .from("orders").update({ status: "cancelled" }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -139,8 +182,8 @@ const productSchema = z.object({
   description: z.string().max(5000).nullable().optional(),
   price: z.number().min(0).max(1_000_000),
   old_price: z.number().min(0).max(1_000_000).nullable().optional(),
-  image_url: z.string().url().max(2000).nullable().optional(),
-  images: z.array(z.string().url().max(2000)).max(3).optional(),
+  image_url: z.string().url().max(4000).nullable().optional(),
+  images: z.array(z.string().url().max(4000)).max(3).optional(),
   category: z.string().max(100).nullable().optional(),
   condition: z.string().max(50).optional(),
   stock: z.number().int().min(0).max(1_000_000).optional(),
@@ -387,6 +430,29 @@ export const createOrder = createServerFn({ method: "POST" })
     const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
     const total = itemsTotal + shippingCost;
 
+    // --- Validate stock availability against current DB values ---
+    const ids = Array.from(new Set(data.items.map((i) => i.id).filter(Boolean)));
+    if (ids.length) {
+      const { data: prods } = await supabaseAdmin
+        .from("products").select("id, title, stock, status").in("id", ids);
+      const byId: Record<string, { title: string; stock: number; status: string }> = {};
+      for (const p of prods ?? [])
+        byId[(p as any).id] = {
+          title: (p as any).title,
+          stock: Number((p as any).stock ?? 0),
+          status: (p as any).status,
+        };
+      for (const it of data.items) {
+        const cur = byId[it.id];
+        if (!cur) continue;
+        if (cur.status === "sold" || cur.stock < it.quantity) {
+          throw new Error(
+            `Stoku i pamjaftueshëm për "${cur.title}". Mbeten: ${Math.max(0, cur.stock)}`,
+          );
+        }
+      }
+    }
+
     const { data: row, error } = await supabaseAdmin
       .from("orders")
       .insert({
@@ -399,11 +465,15 @@ export const createOrder = createServerFn({ method: "POST" })
         total,
         shipping_cost: shippingCost,
         payment_method: "cash_on_delivery",
-        status: "new",
+        status: "pending",
       })
       .select("id")
       .single();
     if (error || !row) throw new Error(error?.message ?? "Gabim te porosia");
+
+    // --- Decrement stock immediately (reserve) ---
+    await decrementStockForOrder(data.items);
+
     return { id: row.id };
   });
 
@@ -449,8 +519,18 @@ export const adminUploadProductImage = createServerFn({ method: "POST" })
       .from("flladituks-images")
       .upload(path, buf, { contentType: data.contentType, upsert: false });
     if (error) throw new Error(error.message);
-    const { data: pub } = supabaseAdmin.storage.from("flladituks-images").getPublicUrl(path);
-    return { url: pub.publicUrl };
+    // Public buckets are blocked by workspace policy — use a long-lived signed URL
+    // (10 years). Storage RLS already allows anon SELECT on this bucket too.
+    const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+    const { data: signed, error: signErr } = await supabaseAdmin.storage
+      .from("flladituks-images")
+      .createSignedUrl(path, TEN_YEARS);
+    if (signErr || !signed?.signedUrl) {
+      // Fallback to public URL (works if policy ever changes)
+      const { data: pub } = supabaseAdmin.storage.from("flladituks-images").getPublicUrl(path);
+      return { url: pub.publicUrl };
+    }
+    return { url: signed.signedUrl };
   });
 
 // =================== Tracking number ===================
@@ -542,4 +622,50 @@ export const adminSetNotificationEmail = createServerFn({ method: "POST" })
       .upsert({ key: NOTIFY_EMAIL_KEY, value: data.email, updated_at: new Date().toISOString() });
     if (error) throw new Error(error.message);
     return { email: data.email };
+  });
+
+// =================== EmailJS configuration (stored in app_settings) ===================
+
+const EMAILJS_KEY = "emailjs_config";
+
+export const getEmailJsConfig = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", EMAILJS_KEY)
+    .maybeSingle();
+  const v = (data?.value ?? null) as { serviceId?: string; templateId?: string; publicKey?: string } | null;
+  return {
+    serviceId: v?.serviceId ?? "",
+    templateId: v?.templateId ?? "",
+    publicKey: v?.publicKey ?? "",
+  };
+});
+
+export const adminSetEmailJsConfig = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: { token: string; serviceId: string; templateId: string; publicKey: string }) =>
+      z
+        .object({
+          token: z.string(),
+          serviceId: z.string().trim().max(100),
+          templateId: z.string().trim().max(100),
+          publicKey: z.string().trim().max(200),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const value = {
+      serviceId: data.serviceId,
+      templateId: data.templateId,
+      publicKey: data.publicKey,
+    };
+    const { error } = await supabaseAdmin
+      .from("app_settings")
+      .upsert({ key: EMAILJS_KEY, value, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return value;
   });

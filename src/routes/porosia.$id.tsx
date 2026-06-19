@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft, FileDown, Truck } from "lucide-react";
-import { getOrderById } from "@/lib/admin.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft, FileDown, Truck, XCircle } from "lucide-react";
+import { getOrderById, cancelOrderByCustomer } from "@/lib/admin.functions";
 import { formatPrice, statusLabel } from "@/lib/cities";
 import { exportInvoiceToPDF } from "@/lib/exports";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export const Route = createFileRoute("/porosia/$id")({
   component: InvoicePage,
@@ -28,6 +30,8 @@ export const Route = createFileRoute("/porosia/$id")({
 
 function InvoicePage() {
   const { id } = useParams({ from: "/porosia/$id" });
+  const qc = useQueryClient();
+  const [cancelling, setCancelling] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["order", id],
     queryFn: () => getOrderById({ data: { id } }),
@@ -45,6 +49,21 @@ function InvoicePage() {
   const items = (data.items as any[]) ?? [];
   const itemsTotal = items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
   const shipping = Number(data.shipping_cost ?? 0);
+  const canCancel = ["pending", "new", "processing"].includes(data.status);
+
+  async function handleCancel() {
+    if (!confirm("Jeni i sigurt që doni ta anuloni porosinë?")) return;
+    setCancelling(true);
+    try {
+      await cancelOrderByCustomer({ data: { id } });
+      toast.success("Porosia juaj u anulua me sukses dhe stoku u lirua!");
+      qc.invalidateQueries({ queryKey: ["order", id] });
+    } catch (e: any) {
+      toast.error("Anulimi dështoi", { description: e?.message });
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-secondary/30 py-6 print:bg-white print:py-0">
@@ -168,6 +187,25 @@ function InvoicePage() {
                 <span className="text-xl font-bold text-primary">{formatPrice(data.total)}</span>
               </div>
             </div>
+
+            {canCancel && (
+              <div className="mt-5 border-t pt-5 print:hidden">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                  className="w-full rounded-full"
+                  size="lg"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  {cancelling ? "Duke anuluar..." : "Anulo Porosinë"}
+                </Button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">
+                  Mund ta anuloni vetëm përderisa porosia nuk është nisur ende.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

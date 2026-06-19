@@ -53,10 +53,12 @@ export const CATEGORIES = [
 export const CONDITIONS = ["I ri", "Si i ri", "I përdorur"];
 
 export const ORDER_STATUSES = [
+  { value: "pending", label: "Në pritje" },
   { value: "new", label: "E re" },
   { value: "processing", label: "Në proces" },
-  { value: "shipped", label: "E dërguar" },
+  { value: "shipped", label: "Në dorëzim" },
   { value: "completed", label: "E përfunduar" },
+  { value: "cancelled", label: "E Anuluar" },
   { value: "rejected", label: "Refuzuar" },
 ] as const;
 

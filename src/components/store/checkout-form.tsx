@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ const FREE_SHIPPING_THRESHOLD = 20;
 export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const { items, total: itemsTotal, clear } = useCart();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [form, setForm] = useState({
     customer_name: "",
     phone: "",
@@ -85,6 +87,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         },
       });
       clear();
+      qc.invalidateQueries({ queryKey: ["products"] });
       toast.success("Porosia u krye me sukses!");
       // Fire-and-forget email notification to admin (won't block redirect).
       sendOrderNotification({
