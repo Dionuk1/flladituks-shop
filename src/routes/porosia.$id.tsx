@@ -30,6 +30,8 @@ export const Route = createFileRoute("/porosia/$id")({
 
 function InvoicePage() {
   const { id } = useParams({ from: "/porosia/$id" });
+  const qc = useQueryClient();
+  const [cancelling, setCancelling] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["order", id],
     queryFn: () => getOrderById({ data: { id } }),
@@ -47,6 +49,21 @@ function InvoicePage() {
   const items = (data.items as any[]) ?? [];
   const itemsTotal = items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
   const shipping = Number(data.shipping_cost ?? 0);
+  const canCancel = ["pending", "new", "processing"].includes(data.status);
+
+  async function handleCancel() {
+    if (!confirm("Jeni i sigurt që doni ta anuloni porosinë?")) return;
+    setCancelling(true);
+    try {
+      await cancelOrderByCustomer({ data: { id } });
+      toast.success("Porosia juaj u anulua me sukses dhe stoku u lirua!");
+      qc.invalidateQueries({ queryKey: ["order", id] });
+    } catch (e: any) {
+      toast.error("Anulimi dështoi", { description: e?.message });
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-secondary/30 py-6 print:bg-white print:py-0">
