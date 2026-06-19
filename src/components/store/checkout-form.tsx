@@ -87,6 +87,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         },
       });
       clear();
+      qc.invalidateQueries({ queryKey: ["products"] });
       toast.success("Porosia u krye me sukses!");
       // Fire-and-forget email notification to admin (won't block redirect).
       sendOrderNotification({
