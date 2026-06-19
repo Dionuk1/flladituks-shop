@@ -33,7 +33,7 @@ export const adminStats = createServerFn({ method: "POST" })
     return {
       products: products.count ?? 0,
       orders: ords.length,
-      newOrders: ords.filter((o) => o.status === "new").length,
+      newOrders: ords.filter((o) => o.status === "pending" || o.status === "new").length,
       revenue: ords.reduce((s, o) => s + Number(o.total ?? 0), 0),
     };
   });
