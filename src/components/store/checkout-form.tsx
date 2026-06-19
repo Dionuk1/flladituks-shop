@@ -38,6 +38,7 @@ const FREE_SHIPPING_THRESHOLD = 20;
 export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const { items, total: itemsTotal, clear } = useCart();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [form, setForm] = useState({
     customer_name: "",
     phone: "",
