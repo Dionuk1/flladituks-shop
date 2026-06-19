@@ -579,3 +579,112 @@ function NotificationEmailEditor() {
     </Dialog>
   );
 }
+
+function EmailJsConfigEditor() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ serviceId: "", templateId: "", publicKey: "" });
+
+  const { data } = useQuery({
+    queryKey: ["emailjs-config"],
+    queryFn: () => getEmailJsConfig(),
+  });
+  const configured =
+    !!(data?.serviceId && data?.templateId && data?.publicKey);
+
+  async function save() {
+    if (!form.serviceId.trim() || !form.templateId.trim() || !form.publicKey.trim()) {
+      toast.error("Plotëso të 3 fushat");
+      return;
+    }
+    setSaving(true);
+    try {
+      await adminSetEmailJsConfig({
+        data: {
+          token: requireToken(),
+          serviceId: form.serviceId.trim(),
+          templateId: form.templateId.trim(),
+          publicKey: form.publicKey.trim(),
+        },
+      });
+      toast.success("Konfigurimi i EmailJS u ruajt!");
+      qc.invalidateQueries({ queryKey: ["emailjs-config"] });
+      setOpen(false);
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) {
+          setForm({
+            serviceId: data?.serviceId ?? "",
+            templateId: data?.templateId ?? "",
+            publicKey: data?.publicKey ?? "",
+          });
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" className="rounded-full">
+          <Settings className="mr-1 h-4 w-4" />
+          {configured ? "EmailJS: i konfiguruar" : "Konfiguro EmailJS"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cilësimet e EmailJS</DialogTitle>
+          <DialogDescription>
+            Vendos ID-të e EmailJS që përdoren për të dërguar njoftimet e porosive.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="ejs-service">Service ID</Label>
+            <Input
+              id="ejs-service"
+              value={form.serviceId}
+              onChange={(e) => setForm((p) => ({ ...p, serviceId: e.target.value }))}
+              placeholder="service_xxxxxxx"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ejs-template">Template ID</Label>
+            <Input
+              id="ejs-template"
+              value={form.templateId}
+              onChange={(e) => setForm((p) => ({ ...p, templateId: e.target.value }))}
+              placeholder="template_xxxxxxx"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ejs-public">Public Key</Label>
+            <Input
+              id="ejs-public"
+              value={form.publicKey}
+              onChange={(e) => setForm((p) => ({ ...p, publicKey: e.target.value }))}
+              placeholder="xxxxxxxxxxxxxxxx"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Template duhet të përdorë variablat: to_email, order_id, customer_name, phone,
+            city, address, items, shipping_cost, total, notes, subject.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Anulo</Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Duke ruajtur..." : "Ruaj"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
