@@ -1,17 +1,10 @@
 // EmailJS notification for new orders.
-// Reads the admin's notification email from Supabase (app_settings) and sends
-// a notification via EmailJS using publishable VITE_EMAILJS_* env vars.
-//
-// Required env vars (publishable — safe to expose):
-//   VITE_EMAILJS_SERVICE_ID
-//   VITE_EMAILJS_TEMPLATE_ID
-//   VITE_EMAILJS_PUBLIC_KEY
-//
-// If any of these are missing, the call is a silent no-op so checkout never
-// breaks because of email config issues.
+// Reads BOTH the admin notification email AND the EmailJS credentials from
+// Supabase (app_settings). Falls back to VITE_EMAILJS_* env vars if config
+// is not stored in the database.
 
 import emailjs from "@emailjs/browser";
-import { getNotificationEmail } from "@/lib/admin.functions";
+import { getNotificationEmail, getEmailJsConfig } from "@/lib/admin.functions";
 
 type OrderItem = { id: string; title: string; price: number; quantity: number };
 
@@ -32,23 +25,34 @@ function fmt(n: number) {
 }
 
 export async function sendOrderNotification(payload: OrderNotificationPayload) {
-  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as string | undefined;
-  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID as string | undefined;
-  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string | undefined;
+  // 1) Pick up EmailJS credentials — DB first, env as fallback.
+  let serviceId = "";
+  let templateId = "";
+  let publicKey = "";
+  try {
+    const cfg = await getEmailJsConfig();
+    serviceId = cfg.serviceId || "";
+    templateId = cfg.templateId || "";
+    publicKey = cfg.publicKey || "";
+  } catch {
+    // ignore — fall back to env
+  }
+  serviceId = serviceId || (import.meta.env.VITE_EMAILJS_SERVICE_ID as string | undefined) || "";
+  templateId = templateId || (import.meta.env.VITE_EMAILJS_TEMPLATE_ID as string | undefined) || "";
+  publicKey = publicKey || (import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string | undefined) || "";
 
   if (!serviceId || !templateId || !publicKey) {
-    // EmailJS not configured yet — skip silently.
     return { sent: false, reason: "emailjs_not_configured" as const };
   }
 
+  // 2) Pick up the recipient (admin notification email).
   let to_email: string | null = null;
   try {
     const r = await getNotificationEmail();
     to_email = r.email;
   } catch {
-    // fallthrough — handled below
+    // fallthrough
   }
-
   if (!to_email) {
     return { sent: false, reason: "no_admin_email" as const };
   }
@@ -75,7 +79,6 @@ export async function sendOrderNotification(payload: OrderNotificationPayload) {
     await emailjs.send(serviceId, templateId, templateParams, { publicKey });
     return { sent: true as const };
   } catch (e: any) {
-    // Don't break checkout if email fails.
     console.error("EmailJS send failed", e);
     return { sent: false, reason: "send_failed" as const, error: e?.message };
   }
