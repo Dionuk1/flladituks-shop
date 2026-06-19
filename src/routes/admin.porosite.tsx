@@ -23,6 +23,7 @@ import {
   adminListOrders, adminUpdateOrderStatus, adminDeleteOrder, adminFinancials,
   adminSetShippingPrice, adminRejectedPhones, adminSetTrackingNumber,
   getNotificationEmail, adminSetNotificationEmail,
+  getEmailJsConfig, adminSetEmailJsConfig,
 } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
 import { ORDER_STATUSES, formatPrice, statusLabel, type OrderStatus } from "@/lib/cities";
