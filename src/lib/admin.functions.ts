@@ -430,6 +430,29 @@ export const createOrder = createServerFn({ method: "POST" })
     const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
     const total = itemsTotal + shippingCost;
 
+    // --- Validate stock availability against current DB values ---
+    const ids = Array.from(new Set(data.items.map((i) => i.id).filter(Boolean)));
+    if (ids.length) {
+      const { data: prods } = await supabaseAdmin
+        .from("products").select("id, title, stock, status").in("id", ids);
+      const byId: Record<string, { title: string; stock: number; status: string }> = {};
+      for (const p of prods ?? [])
+        byId[(p as any).id] = {
+          title: (p as any).title,
+          stock: Number((p as any).stock ?? 0),
+          status: (p as any).status,
+        };
+      for (const it of data.items) {
+        const cur = byId[it.id];
+        if (!cur) continue;
+        if (cur.status === "sold" || cur.stock < it.quantity) {
+          throw new Error(
+            `Stoku i pamjaftueshëm për "${cur.title}". Mbeten: ${Math.max(0, cur.stock)}`,
+          );
+        }
+      }
+    }
+
     const { data: row, error } = await supabaseAdmin
       .from("orders")
       .insert({
@@ -442,11 +465,15 @@ export const createOrder = createServerFn({ method: "POST" })
         total,
         shipping_cost: shippingCost,
         payment_method: "cash_on_delivery",
-        status: "new",
+        status: "pending",
       })
       .select("id")
       .single();
     if (error || !row) throw new Error(error?.message ?? "Gabim te porosia");
+
+    // --- Decrement stock immediately (reserve) ---
+    await decrementStockForOrder(data.items);
+
     return { id: row.id };
   });
 
