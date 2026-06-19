@@ -623,3 +623,49 @@ export const adminSetNotificationEmail = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { email: data.email };
   });
+
+// =================== EmailJS configuration (stored in app_settings) ===================
+
+const EMAILJS_KEY = "emailjs_config";
+
+export const getEmailJsConfig = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", EMAILJS_KEY)
+    .maybeSingle();
+  const v = (data?.value ?? null) as { serviceId?: string; templateId?: string; publicKey?: string } | null;
+  return {
+    serviceId: v?.serviceId ?? "",
+    templateId: v?.templateId ?? "",
+    publicKey: v?.publicKey ?? "",
+  };
+});
+
+export const adminSetEmailJsConfig = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: { token: string; serviceId: string; templateId: string; publicKey: string }) =>
+      z
+        .object({
+          token: z.string(),
+          serviceId: z.string().trim().max(100),
+          templateId: z.string().trim().max(100),
+          publicKey: z.string().trim().max(200),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const value = {
+      serviceId: data.serviceId,
+      templateId: data.templateId,
+      publicKey: data.publicKey,
+    };
+    const { error } = await supabaseAdmin
+      .from("app_settings")
+      .upsert({ key: EMAILJS_KEY, value, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return value;
+  });
