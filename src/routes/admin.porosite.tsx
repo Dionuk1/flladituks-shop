@@ -146,6 +146,7 @@ function OrdersPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <NotificationEmailEditor />
+          <EmailJsConfigEditor />
           <ShippingPriceEditor current={fin?.shippingPrice ?? 2} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
