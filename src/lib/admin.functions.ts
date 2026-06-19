@@ -519,8 +519,18 @@ export const adminUploadProductImage = createServerFn({ method: "POST" })
       .from("flladituks-images")
       .upload(path, buf, { contentType: data.contentType, upsert: false });
     if (error) throw new Error(error.message);
-    const { data: pub } = supabaseAdmin.storage.from("flladituks-images").getPublicUrl(path);
-    return { url: pub.publicUrl };
+    // Public buckets are blocked by workspace policy — use a long-lived signed URL
+    // (10 years). Storage RLS already allows anon SELECT on this bucket too.
+    const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+    const { data: signed, error: signErr } = await supabaseAdmin.storage
+      .from("flladituks-images")
+      .createSignedUrl(path, TEN_YEARS);
+    if (signErr || !signed?.signedUrl) {
+      // Fallback to public URL (works if policy ever changes)
+      const { data: pub } = supabaseAdmin.storage.from("flladituks-images").getPublicUrl(path);
+      return { url: pub.publicUrl };
+    }
+    return { url: signed.signedUrl };
   });
 
 // =================== Tracking number ===================
