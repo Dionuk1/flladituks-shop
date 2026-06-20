@@ -25,7 +25,8 @@ function fmt(n: number) {
 }
 
 export async function sendOrderNotification(payload: OrderNotificationPayload) {
-  // 1) Pick up EmailJS credentials — DB first, env as fallback.
+  console.log("[EmailJS] sendOrderNotification start", { orderId: payload.orderId });
+
   let serviceId = "";
   let templateId = "";
   let publicKey = "";
@@ -34,26 +35,32 @@ export async function sendOrderNotification(payload: OrderNotificationPayload) {
     serviceId = cfg.serviceId || "";
     templateId = cfg.templateId || "";
     publicKey = cfg.publicKey || "";
-  } catch {
-    // ignore — fall back to env
+    console.log("[EmailJS] config loaded", {
+      hasService: !!serviceId,
+      hasTemplate: !!templateId,
+      hasKey: !!publicKey,
+    });
+  } catch (e) {
+    console.error("[EmailJS] failed to load config from DB", e);
   }
   serviceId = serviceId || (import.meta.env.VITE_EMAILJS_SERVICE_ID as string | undefined) || "";
   templateId = templateId || (import.meta.env.VITE_EMAILJS_TEMPLATE_ID as string | undefined) || "";
   publicKey = publicKey || (import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string | undefined) || "";
 
   if (!serviceId || !templateId || !publicKey) {
+    console.error("[EmailJS] missing credentials — aborting");
     return { sent: false, reason: "emailjs_not_configured" as const };
   }
 
-  // 2) Pick up the recipient (admin notification email).
   let to_email: string | null = null;
   try {
     const r = await getNotificationEmail();
     to_email = r.email;
-  } catch {
-    // fallthrough
+  } catch (e) {
+    console.error("[EmailJS] failed to load notification email", e);
   }
   if (!to_email) {
+    console.error("[EmailJS] no admin recipient email configured");
     return { sent: false, reason: "no_admin_email" as const };
   }
 
@@ -63,6 +70,8 @@ export async function sendOrderNotification(payload: OrderNotificationPayload) {
 
   const templateParams = {
     to_email,
+    email: to_email,
+    reply_to: to_email,
     order_id: payload.orderId,
     customer_name: payload.customerName,
     phone: payload.phone,
@@ -75,11 +84,23 @@ export async function sendOrderNotification(payload: OrderNotificationPayload) {
     subject: `Porosi e re #${payload.orderId.slice(0, 8)} — ${payload.customerName}`,
   };
 
+  console.log("[EmailJS] sending", { serviceId, templateId, to_email, order_id: payload.orderId });
+
   try {
-    await emailjs.send(serviceId, templateId, templateParams, { publicKey });
-    return { sent: true as const };
+    emailjs.init({ publicKey });
+    const res = await emailjs.send(serviceId, templateId, templateParams, { publicKey });
+    console.log("[EmailJS] sent OK", res);
+    return { sent: true as const, res };
   } catch (e: any) {
-    console.error("EmailJS send failed", e);
-    return { sent: false, reason: "send_failed" as const, error: e?.message };
+    console.error("[EmailJS] send failed", {
+      status: e?.status,
+      text: e?.text,
+      message: e?.message,
+    });
+    return {
+      sent: false,
+      reason: "send_failed" as const,
+      error: e?.text || e?.message || String(e),
+    };
   }
 }

@@ -89,23 +89,37 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
       clear();
       qc.invalidateQueries({ queryKey: ["products"] });
       toast.success("Porosia u krye me sukses!");
-      // Fire-and-forget email notification to admin (won't block redirect).
-      sendOrderNotification({
-        orderId: res.id,
-        customerName: parsed.data.customer_name,
-        phone: parsed.data.phone,
-        city: parsed.data.city,
-        address: parsed.data.address,
-        notes: parsed.data.notes || null,
-        items: items.map((i) => ({
-          id: i.id,
-          title: i.title,
-          price: i.price,
-          quantity: i.quantity,
-        })),
-        total,
-        shippingCost,
-      }).catch(() => {});
+      // Send admin email notification — awaited so failures surface in console + toast.
+      try {
+        const emailRes = await sendOrderNotification({
+          orderId: res.id,
+          customerName: parsed.data.customer_name,
+          phone: parsed.data.phone,
+          city: parsed.data.city,
+          address: parsed.data.address,
+          notes: parsed.data.notes || null,
+          items: items.map((i) => ({
+            id: i.id,
+            title: i.title,
+            price: i.price,
+            quantity: i.quantity,
+          })),
+          total,
+          shippingCost,
+        });
+        if (!emailRes.sent) {
+          console.error("[Checkout] email notification not sent:", emailRes);
+          toast.warning("Porosia u ruajt, por njoftimi me email dështoi", {
+            description:
+              ("error" in emailRes && emailRes.error) || emailRes.reason,
+          });
+        }
+      } catch (mailErr: any) {
+        console.error("[Checkout] sendOrderNotification threw:", mailErr);
+        toast.warning("Njoftimi me email dështoi", {
+          description: mailErr?.message,
+        });
+      }
       onDone();
       navigate({ to: "/porosia/$id", params: { id: res.id } });
     } catch (err: any) {
