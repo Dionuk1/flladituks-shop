@@ -121,7 +121,7 @@ function InvoicePage() {
             </div>
             <div>
               <p className="text-xs font-medium uppercase text-muted-foreground">Pagesa</p>
-              <p className="mt-1 text-sm">💵 Në dorë (Cash on Delivery)</p>
+              <p className="mt-1 text-sm">{PAYMENT_INFO[data.payment_method ?? "cash_on_delivery"]?.label ?? data.payment_method}</p>
             </div>
             {data.tracking_number && (
               <div className="sm:col-span-2">
