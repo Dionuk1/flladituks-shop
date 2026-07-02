@@ -111,6 +111,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           })),
           total,
           shippingCost,
+          paymentMethod,
         });
         if (!emailRes.sent) {
           console.error("[Checkout] email notification not sent:", emailRes);
