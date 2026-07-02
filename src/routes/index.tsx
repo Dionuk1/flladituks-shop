@@ -97,6 +97,8 @@ function Storefront() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <PaymentNotice className="mb-5" />
+
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
