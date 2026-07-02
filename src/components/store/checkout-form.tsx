@@ -227,10 +227,12 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
             className="gap-2"
           >
             {[
-              { v: "cash_on_delivery", label: "Pagesë në Dorëzim", desc: "Paguaj kur ta pranosh porosinë", icon: "💵" },
-              { v: "onefor", label: "Paguaj me OneFor", desc: "Skano QR-in pas porositjes", icon: "📱" },
-              { v: "paysera", label: "Paguaj me Paysera", desc: "Skano QR-in pas porositjes", icon: "🔵" },
-            ].map((opt) => (
+              { v: "cash_on_delivery", label: "Pagesë në Dorëzim", desc: "Paguaj kur ta pranosh porosinë", icon: "💵", requiresFreeShipping: false },
+              { v: "onefor", label: "Paguaj me OneFor", desc: "Skano QR-in pas porositjes", icon: "📱", requiresFreeShipping: true },
+              { v: "paysera", label: "Paguaj me Paysera", desc: "Skano QR-in pas porositjes", icon: "🔵", requiresFreeShipping: true },
+            ]
+              .filter((opt) => digitalPaymentsAllowed || !opt.requiresFreeShipping)
+              .map((opt) => (
               <label
                 key={opt.v}
                 htmlFor={`pay-${opt.v}`}
