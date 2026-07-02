@@ -18,6 +18,13 @@ export type OrderNotificationPayload = {
   items: OrderItem[];
   total: number;
   shippingCost: number;
+  paymentMethod?: string;
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  cash_on_delivery: "Pagesë në Dorëzim (Cash on Delivery)",
+  onefor: "OneFor (QR Code)",
+  paysera: "Paysera (QR Code)",
 };
 
 function fmt(n: number) {
@@ -81,6 +88,7 @@ export async function sendOrderNotification(payload: OrderNotificationPayload) {
     items: itemsText,
     shipping_cost: fmt(payload.shippingCost),
     total: fmt(payload.total),
+    payment_method: PAYMENT_LABELS[payload.paymentMethod ?? "cash_on_delivery"] ?? payload.paymentMethod ?? "",
     subject: `Porosi e re #${payload.orderId.slice(0, 8)} — ${payload.customerName}`,
   };
 

@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCart } from "@/lib/cart";
 import { KOSOVO_CITIES, formatPrice } from "@/lib/cities";
 import { createOrder, getShippingPrice } from "@/lib/admin.functions";
@@ -46,6 +47,9 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
     address: "",
     notes: "",
   });
+  const [paymentMethod, setPaymentMethod] = useState<"cash_on_delivery" | "onefor" | "paysera">(
+    "cash_on_delivery",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(2.0);
 
@@ -78,6 +82,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           city: parsed.data.city,
           address: parsed.data.address,
           notes: parsed.data.notes || null,
+          payment_method: paymentMethod,
           items: items.map((i) => ({
             id: i.id,
             title: i.title,
@@ -106,6 +111,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           })),
           total,
           shippingCost,
+          paymentMethod,
         });
         if (!emailRes.sent) {
           console.error("[Checkout] email notification not sent:", emailRes);
@@ -202,12 +208,38 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           />
         </div>
 
-        <div className="rounded-xl border bg-secondary/40 p-3 text-sm">
-          <p className="font-medium">Mënyra e pagesës</p>
-          <p className="mt-1 text-muted-foreground">
-            💵 Pagesa në dorë (Cash on Delivery)
-          </p>
+        <div className="space-y-2">
+          <Label>Mënyra e pagesës *</Label>
+          <RadioGroup
+            value={paymentMethod}
+            onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
+            className="gap-2"
+          >
+            {[
+              { v: "cash_on_delivery", label: "Pagesë në Dorëzim", desc: "Paguaj kur ta pranosh porosinë", icon: "💵" },
+              { v: "onefor", label: "Paguaj me OneFor", desc: "Skano QR-in pas porositjes", icon: "📱" },
+              { v: "paysera", label: "Paguaj me Paysera", desc: "Skano QR-in pas porositjes", icon: "🔵" },
+            ].map((opt) => (
+              <label
+                key={opt.v}
+                htmlFor={`pay-${opt.v}`}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition ${
+                  paymentMethod === opt.v
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-input bg-secondary/40 hover:bg-secondary"
+                }`}
+              >
+                <RadioGroupItem value={opt.v} id={`pay-${opt.v}`} />
+                <span className="text-lg">{opt.icon}</span>
+                <span className="flex-1">
+                  <span className="block font-medium">{opt.label}</span>
+                  <span className="block text-xs text-muted-foreground">{opt.desc}</span>
+                </span>
+              </label>
+            ))}
+          </RadioGroup>
         </div>
+
       </div>
 
       <footer className="space-y-2 border-t bg-card p-5">

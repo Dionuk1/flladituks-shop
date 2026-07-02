@@ -405,6 +405,7 @@ export const createOrder = createServerFn({ method: "POST" })
       city: string;
       address: string;
       notes?: string | null;
+      payment_method?: string;
       items: Array<z.infer<typeof orderItemSchema>>;
     }) =>
       z
@@ -419,6 +420,9 @@ export const createOrder = createServerFn({ method: "POST" })
           city: z.string().min(1).max(80),
           address: z.string().trim().min(4).max(255),
           notes: z.string().max(500).nullable().optional(),
+          payment_method: z
+            .enum(["cash_on_delivery", "onefor", "paysera"])
+            .default("cash_on_delivery"),
           items: z.array(orderItemSchema).min(1).max(100),
         })
         .parse(d),
@@ -464,7 +468,7 @@ export const createOrder = createServerFn({ method: "POST" })
         items: data.items,
         total,
         shipping_cost: shippingCost,
-        payment_method: "cash_on_delivery",
+        payment_method: data.payment_method,
         status: "pending",
       })
       .select("id")
