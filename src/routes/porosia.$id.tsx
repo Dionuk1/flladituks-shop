@@ -1,12 +1,20 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft, FileDown, Truck, XCircle } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft, FileDown, Truck, XCircle, Download, QrCode } from "lucide-react";
 import { getOrderById, cancelOrderByCustomer } from "@/lib/admin.functions";
 import { formatPrice, statusLabel } from "@/lib/cities";
 import { exportInvoiceToPDF } from "@/lib/exports";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useState } from "react";
+import oneforQr from "@/assets/onefor_qr.png";
+import payseraQr from "@/assets/paysera_qr.png";
+
+const PAYMENT_INFO: Record<string, { label: string; icon: string; qr?: string; filename?: string }> = {
+  cash_on_delivery: { label: "💵 Në dorë (Cash on Delivery)", icon: "💵" },
+  onefor: { label: "OneFor (QR Code)", icon: "📱", qr: oneforQr, filename: "onefor_qr.png" },
+  paysera: { label: "Paysera (QR Code)", icon: "🔵", qr: payseraQr, filename: "paysera_qr.png" },
+};
 
 export const Route = createFileRoute("/porosia/$id")({
   component: InvoicePage,
