@@ -60,6 +60,14 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
 
   const shippingCost = itemsTotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingPrice;
   const total = itemsTotal + shippingCost;
+  const digitalPaymentsAllowed = shippingCost === 0;
+
+  // Force cash-on-delivery when digital payments aren't available.
+  useEffect(() => {
+    if (!digitalPaymentsAllowed && paymentMethod !== "cash_on_delivery") {
+      setPaymentMethod("cash_on_delivery");
+    }
+  }, [digitalPaymentsAllowed, paymentMethod]);
 
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
