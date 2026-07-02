@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCart } from "@/lib/cart";
 import { KOSOVO_CITIES, formatPrice } from "@/lib/cities";
 import { createOrder, getShippingPrice } from "@/lib/admin.functions";
@@ -46,6 +47,9 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
     address: "",
     notes: "",
   });
+  const [paymentMethod, setPaymentMethod] = useState<"cash_on_delivery" | "onefor" | "paysera">(
+    "cash_on_delivery",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(2.0);
 
@@ -78,6 +82,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           city: parsed.data.city,
           address: parsed.data.address,
           notes: parsed.data.notes || null,
+          payment_method: paymentMethod,
           items: items.map((i) => ({
             id: i.id,
             title: i.title,
