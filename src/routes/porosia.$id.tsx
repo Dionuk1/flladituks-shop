@@ -137,6 +137,50 @@ function InvoicePage() {
             )}
           </div>
 
+          {(() => {
+            const pay = PAYMENT_INFO[data.payment_method ?? ""];
+            if (!pay?.qr) return null;
+            return (
+              <div className="border-t bg-primary/5 p-6 print:hidden">
+                <div className="flex items-center gap-2">
+                  <QrCode className="h-5 w-5 text-primary" />
+                  <p className="text-sm font-semibold">Paguaj me {pay.label}</p>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Për të kryer pagesën, shkarko QR-in më poshtë dhe importoje në galeri.
+                  Pastaj hape aplikacionin <strong>{data.payment_method === "onefor" ? "OneFor" : "Paysera"}</strong>,
+                  zgjidh opsionin për të skanuar/ngarkuar QR nga galeria dhe konfirmo shumën{" "}
+                  <strong>{formatPrice(data.total)}</strong>.
+                </p>
+                <div className="mt-4 flex flex-col items-center gap-3">
+                  <div className="rounded-2xl border bg-white p-3 shadow-sm">
+                    <img
+                      src={pay.qr}
+                      alt={`QR ${pay.label}`}
+                      className="h-56 w-56 object-contain"
+                    />
+                  </div>
+                  <a
+                    href={pay.qr}
+                    download={pay.filename}
+                    className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+                  >
+                    <Download className="h-4 w-4" /> Shkarko QR Code
+                  </a>
+                  <ol className="mt-2 w-full max-w-md list-decimal space-y-1 rounded-xl bg-card p-4 pl-8 text-xs text-muted-foreground">
+                    <li>Shtyp butonin "Shkarko QR Code" më sipër.</li>
+                    <li>Fotoja ruhet në galerinë e telefonit tënd.</li>
+                    <li>Hape aplikacionin {data.payment_method === "onefor" ? "OneFor" : "Paysera"}.</li>
+                    <li>Zgjidh "Skano QR" → "Ngarko nga galeria" dhe përzgjidh foton.</li>
+                    <li>Konfirmo shumën {formatPrice(data.total)} dhe përfundo pagesën.</li>
+                  </ol>
+                </div>
+              </div>
+            );
+          })()}
+
+
+
 
           <div className="border-t p-6">
             <p className="mb-3 text-sm font-semibold">Të dhënat e dërgesës</p>
