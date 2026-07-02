@@ -155,6 +155,8 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           <ArrowLeft className="h-4 w-4" /> Kthehu te shporta
         </button>
 
+        <PaymentNotice />
+
         <div>
           <Label htmlFor="name">Emri dhe Mbiemri *</Label>
           <Input
