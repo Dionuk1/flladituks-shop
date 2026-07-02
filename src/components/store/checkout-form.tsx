@@ -18,6 +18,7 @@ import { useCart } from "@/lib/cart";
 import { KOSOVO_CITIES, formatPrice } from "@/lib/cities";
 import { createOrder, getShippingPrice } from "@/lib/admin.functions";
 import { sendOrderNotification } from "@/lib/email-notify";
+import { PaymentNotice } from "@/components/store/payment-notice";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -59,6 +60,14 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
 
   const shippingCost = itemsTotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingPrice;
   const total = itemsTotal + shippingCost;
+  const digitalPaymentsAllowed = shippingCost === 0;
+
+  // Force cash-on-delivery when digital payments aren't available.
+  useEffect(() => {
+    if (!digitalPaymentsAllowed && paymentMethod !== "cash_on_delivery") {
+      setPaymentMethod("cash_on_delivery");
+    }
+  }, [digitalPaymentsAllowed, paymentMethod]);
 
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -146,6 +155,8 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           <ArrowLeft className="h-4 w-4" /> Kthehu te shporta
         </button>
 
+        <PaymentNotice />
+
         <div>
           <Label htmlFor="name">Emri dhe Mbiemri *</Label>
           <Input
@@ -216,10 +227,12 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
             className="gap-2"
           >
             {[
-              { v: "cash_on_delivery", label: "Pagesë në Dorëzim", desc: "Paguaj kur ta pranosh porosinë", icon: "💵" },
-              { v: "onefor", label: "Paguaj me OneFor", desc: "Skano QR-in pas porositjes", icon: "📱" },
-              { v: "paysera", label: "Paguaj me Paysera", desc: "Skano QR-in pas porositjes", icon: "🔵" },
-            ].map((opt) => (
+              { v: "cash_on_delivery", label: "Pagesë në Dorëzim", desc: "Paguaj kur ta pranosh porosinë", icon: "💵", requiresFreeShipping: false },
+              { v: "onefor", label: "Paguaj me OneFor", desc: "Skano QR-in pas porositjes", icon: "📱", requiresFreeShipping: true },
+              { v: "paysera", label: "Paguaj me Paysera", desc: "Skano QR-in pas porositjes", icon: "🔵", requiresFreeShipping: true },
+            ]
+              .filter((opt) => digitalPaymentsAllowed || !opt.requiresFreeShipping)
+              .map((opt) => (
               <label
                 key={opt.v}
                 htmlFor={`pay-${opt.v}`}
