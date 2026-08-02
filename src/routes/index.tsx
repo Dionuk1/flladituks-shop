@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Truck, ShieldCheck, Banknote, Search, SlidersHorizontal, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StoreHeader } from "@/components/store/store-header";
-import { PaymentNotice } from "@/components/store/payment-notice";
 import { CartDrawer } from "@/components/store/cart-drawer";
 import { ProductCard, discountPercent, type Product } from "@/components/store/product-card";
 import { CATEGORIES } from "@/lib/cities";
@@ -97,8 +96,6 @@ function Storefront() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <PaymentNotice className="mb-5" />
-
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <button
             type="button"

@@ -2,12 +2,15 @@ import { Link } from "@tanstack/react-router";
 import { ShoppingCart, Sparkles } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { AnnouncementBar } from "@/components/store/announcement-bar";
 
 export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
   const { count, setOpen } = useCart();
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <AnnouncementBar />
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <span className="grid h-9 w-9 place-items-center rounded-xl gradient-brand text-white shadow-sm">
@@ -28,7 +31,9 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
           <Button
+
             variant="outline"
             size="sm"
             onClick={() => setOpen(true)}

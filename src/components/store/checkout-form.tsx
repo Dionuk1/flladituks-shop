@@ -13,12 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCart } from "@/lib/cart";
 import { KOSOVO_CITIES, formatPrice } from "@/lib/cities";
 import { createOrder, getShippingPrice } from "@/lib/admin.functions";
 import { sendOrderNotification } from "@/lib/email-notify";
-import { PaymentNotice } from "@/components/store/payment-notice";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -35,7 +33,7 @@ const schema = z.object({
   notes: z.string().max(500).optional(),
 });
 
-const FREE_SHIPPING_THRESHOLD = 20;
+const FREE_SHIPPING_THRESHOLD = 25;
 
 export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const { items, total: itemsTotal, clear } = useCart();
@@ -48,9 +46,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
     address: "",
     notes: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState<"cash_on_delivery" | "onefor" | "paysera">(
-    "cash_on_delivery",
-  );
+  const paymentMethod = "cash_on_delivery" as const;
   const [submitting, setSubmitting] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(2.0);
 
@@ -60,14 +56,6 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
 
   const shippingCost = itemsTotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingPrice;
   const total = itemsTotal + shippingCost;
-  const digitalPaymentsAllowed = shippingCost === 0;
-
-  // Force cash-on-delivery when digital payments aren't available.
-  useEffect(() => {
-    if (!digitalPaymentsAllowed && paymentMethod !== "cash_on_delivery") {
-      setPaymentMethod("cash_on_delivery");
-    }
-  }, [digitalPaymentsAllowed, paymentMethod]);
 
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -155,8 +143,6 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           <ArrowLeft className="h-4 w-4" /> Kthehu te shporta
         </button>
 
-        <PaymentNotice />
-
         <div>
           <Label htmlFor="name">Emri dhe Mbiemri *</Label>
           <Input
@@ -220,38 +206,18 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         </div>
 
         <div className="space-y-2">
-          <Label>Mënyra e pagesës *</Label>
-          <RadioGroup
-            value={paymentMethod}
-            onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
-            className="gap-2"
-          >
-            {[
-              { v: "cash_on_delivery", label: "Pagesë në Dorëzim", desc: "Paguaj kur ta pranosh porosinë", icon: "💵", requiresFreeShipping: false },
-              { v: "onefor", label: "Paguaj me OneFor", desc: "Skano QR-in pas porositjes", icon: "📱", requiresFreeShipping: true },
-              { v: "paysera", label: "Paguaj me Paysera", desc: "Skano QR-in pas porositjes", icon: "🔵", requiresFreeShipping: true },
-            ]
-              .filter((opt) => digitalPaymentsAllowed || !opt.requiresFreeShipping)
-              .map((opt) => (
-              <label
-                key={opt.v}
-                htmlFor={`pay-${opt.v}`}
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition ${
-                  paymentMethod === opt.v
-                    ? "border-primary bg-primary/5 ring-1 ring-primary"
-                    : "border-input bg-secondary/40 hover:bg-secondary"
-                }`}
-              >
-                <RadioGroupItem value={opt.v} id={`pay-${opt.v}`} />
-                <span className="text-lg">{opt.icon}</span>
-                <span className="flex-1">
-                  <span className="block font-medium">{opt.label}</span>
-                  <span className="block text-xs text-muted-foreground">{opt.desc}</span>
-                </span>
-              </label>
-            ))}
-          </RadioGroup>
+          <Label>Mënyra e pagesës</Label>
+          <div className="flex items-center gap-3 rounded-xl border border-primary bg-primary/5 p-3 text-sm ring-1 ring-primary">
+            <span className="text-lg">💵</span>
+            <span className="flex-1">
+              <span className="block font-medium">Pagesë në Dorëzim</span>
+              <span className="block text-xs text-muted-foreground">
+                Paguaj kur ta pranosh porosinë
+              </span>
+            </span>
+          </div>
         </div>
+
 
       </div>
 

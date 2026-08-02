@@ -23,8 +23,6 @@ export type OrderNotificationPayload = {
 
 const PAYMENT_LABELS: Record<string, string> = {
   cash_on_delivery: "Pagesë në Dorëzim (Cash on Delivery)",
-  onefor: "OneFor (QR Code)",
-  paysera: "Paysera (QR Code)",
 };
 
 function fmt(n: number) {
