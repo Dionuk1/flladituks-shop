@@ -421,7 +421,7 @@ export const createOrder = createServerFn({ method: "POST" })
           address: z.string().trim().min(4).max(255),
           notes: z.string().max(500).nullable().optional(),
           payment_method: z
-            .enum(["cash_on_delivery", "onefor", "paysera"])
+            .enum(["cash_on_delivery"])
             .default("cash_on_delivery"),
           items: z.array(orderItemSchema).min(1).max(100),
         })
@@ -672,4 +672,78 @@ export const adminSetEmailJsConfig = createServerFn({ method: "POST" })
       .upsert({ key: EMAILJS_KEY, value, updated_at: new Date().toISOString() });
     if (error) throw new Error(error.message);
     return value;
+  });
+
+// =================== Porosi Private ===================
+
+const privateOrderSchema = z.object({
+  customer_name: z.string().trim().min(1).max(150),
+  phone: z.string().trim().max(40).default(""),
+  country: z.string().trim().max(80).default("Kosovë"),
+  city: z.string().trim().max(80).default(""),
+  address: z.string().trim().max(400).default(""),
+  description: z.string().trim().max(1000).default(""),
+  cost_price: z.number().min(0).max(1_000_000).default(0),
+  selling_price: z.number().min(0).max(1_000_000).default(0),
+  shipping_cost: z.number().min(0).max(100_000).default(0),
+  status: z.string().max(50).default("processing"),
+  notes: z.string().max(1000).nullable().optional(),
+});
+
+export type PrivateOrderInput = z.infer<typeof privateOrderSchema>;
+
+export const adminListPrivateOrders = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("private_orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const adminInsertPrivateOrders = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; orders: PrivateOrderInput[] }) =>
+    z
+      .object({ token: z.string(), orders: z.array(privateOrderSchema).min(1).max(2000) })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("private_orders").insert(data.orders);
+    if (error) throw new Error(error.message);
+    return { inserted: data.orders.length };
+  });
+
+export const adminUpdatePrivateOrder = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string; order: PrivateOrderInput }) =>
+    z
+      .object({ token: z.string(), id: z.string().uuid(), order: privateOrderSchema })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("private_orders")
+      .update(data.order)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeletePrivateOrder = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string }) =>
+    z.object({ token: z.string(), id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("private_orders").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
