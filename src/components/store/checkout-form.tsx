@@ -13,12 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCart } from "@/lib/cart";
 import { KOSOVO_CITIES, formatPrice } from "@/lib/cities";
 import { createOrder, getShippingPrice } from "@/lib/admin.functions";
 import { sendOrderNotification } from "@/lib/email-notify";
-import { PaymentNotice } from "@/components/store/payment-notice";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -35,7 +33,7 @@ const schema = z.object({
   notes: z.string().max(500).optional(),
 });
 
-const FREE_SHIPPING_THRESHOLD = 20;
+const FREE_SHIPPING_THRESHOLD = 25;
 
 export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const { items, total: itemsTotal, clear } = useCart();
@@ -48,9 +46,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
     address: "",
     notes: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState<"cash_on_delivery" | "onefor" | "paysera">(
-    "cash_on_delivery",
-  );
+  const paymentMethod = "cash_on_delivery" as const;
   const [submitting, setSubmitting] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(2.0);
 
@@ -60,14 +56,6 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
 
   const shippingCost = itemsTotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingPrice;
   const total = itemsTotal + shippingCost;
-  const digitalPaymentsAllowed = shippingCost === 0;
-
-  // Force cash-on-delivery when digital payments aren't available.
-  useEffect(() => {
-    if (!digitalPaymentsAllowed && paymentMethod !== "cash_on_delivery") {
-      setPaymentMethod("cash_on_delivery");
-    }
-  }, [digitalPaymentsAllowed, paymentMethod]);
 
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -154,8 +142,6 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         >
           <ArrowLeft className="h-4 w-4" /> Kthehu te shporta
         </button>
-
-        <PaymentNotice />
 
         <div>
           <Label htmlFor="name">Emri dhe Mbiemri *</Label>

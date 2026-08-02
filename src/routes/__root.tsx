@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/lib/cart";
+import { ThemeProvider } from "@/lib/theme";
 
 function NotFoundComponent() {
   return (
@@ -77,19 +78,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
+      { title: "FlladituKS — Dyqani Online në Kosovë" },
       {
         name: "description",
         content:
           "FlladituKS — produktet më të reja me dërgesë në të gjithë Kosovën. Pagesa në dorë.",
       },
-      { property: "og:title", content: "Lovable App" },
+      { property: "og:title", content: "FlladituKS — Dyqani Online në Kosovë" },
       {
         property: "og:description",
         content: "Bli online me dorëzim të shpejtë në të gjithë Kosovën.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "Lovable App" },
+      { name: "twitter:title", content: "FlladituKS — Dyqani Online në Kosovë" },
       { name: "description", content: "FlladituKS is a modern Albanian e-commerce web application for selling products online." },
       { property: "og:description", content: "FlladituKS is a modern Albanian e-commerce web application for selling products online." },
       { name: "twitter:description", content: "FlladituKS is a modern Albanian e-commerce web application for selling products online." },
@@ -134,10 +135,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <Outlet />
-        <Toaster richColors position="top-right" />
-      </CartProvider>
+      <ThemeProvider>
+        <CartProvider>
+          <Outlet />
+          <Toaster richColors position="top-right" />
+        </CartProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
