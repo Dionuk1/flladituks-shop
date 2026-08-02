@@ -80,6 +80,60 @@ export type Database = {
         }
         Relationships: []
       }
+      private_orders: {
+        Row: {
+          address: string
+          city: string
+          cost_price: number
+          country: string
+          created_at: string
+          customer_name: string
+          description: string
+          id: string
+          notes: string | null
+          phone: string
+          profit: number | null
+          selling_price: number
+          shipping_cost: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string
+          city?: string
+          cost_price?: number
+          country?: string
+          created_at?: string
+          customer_name: string
+          description?: string
+          id?: string
+          notes?: string | null
+          phone?: string
+          profit?: number | null
+          selling_price?: number
+          shipping_cost?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          cost_price?: number
+          country?: string
+          created_at?: string
+          customer_name?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          phone?: string
+          profit?: number | null
+          selling_price?: number
+          shipping_cost?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string | null
