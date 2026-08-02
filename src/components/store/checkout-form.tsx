@@ -206,38 +206,18 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         </div>
 
         <div className="space-y-2">
-          <Label>Mënyra e pagesës *</Label>
-          <RadioGroup
-            value={paymentMethod}
-            onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
-            className="gap-2"
-          >
-            {[
-              { v: "cash_on_delivery", label: "Pagesë në Dorëzim", desc: "Paguaj kur ta pranosh porosinë", icon: "💵", requiresFreeShipping: false },
-              { v: "onefor", label: "Paguaj me OneFor", desc: "Skano QR-in pas porositjes", icon: "📱", requiresFreeShipping: true },
-              { v: "paysera", label: "Paguaj me Paysera", desc: "Skano QR-in pas porositjes", icon: "🔵", requiresFreeShipping: true },
-            ]
-              .filter((opt) => digitalPaymentsAllowed || !opt.requiresFreeShipping)
-              .map((opt) => (
-              <label
-                key={opt.v}
-                htmlFor={`pay-${opt.v}`}
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition ${
-                  paymentMethod === opt.v
-                    ? "border-primary bg-primary/5 ring-1 ring-primary"
-                    : "border-input bg-secondary/40 hover:bg-secondary"
-                }`}
-              >
-                <RadioGroupItem value={opt.v} id={`pay-${opt.v}`} />
-                <span className="text-lg">{opt.icon}</span>
-                <span className="flex-1">
-                  <span className="block font-medium">{opt.label}</span>
-                  <span className="block text-xs text-muted-foreground">{opt.desc}</span>
-                </span>
-              </label>
-            ))}
-          </RadioGroup>
+          <Label>Mënyra e pagesës</Label>
+          <div className="flex items-center gap-3 rounded-xl border border-primary bg-primary/5 p-3 text-sm ring-1 ring-primary">
+            <span className="text-lg">💵</span>
+            <span className="flex-1">
+              <span className="block font-medium">Pagesë në Dorëzim</span>
+              <span className="block text-xs text-muted-foreground">
+                Paguaj kur ta pranosh porosinë
+              </span>
+            </span>
+          </div>
         </div>
+
 
       </div>
 
