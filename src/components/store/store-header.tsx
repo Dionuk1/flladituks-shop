@@ -31,7 +31,9 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
           <Button
+
             variant="outline"
             size="sm"
             onClick={() => setOpen(true)}
