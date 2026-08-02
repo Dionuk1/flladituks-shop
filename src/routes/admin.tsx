@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock, Boxes } from "lucide-react";
+import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock, Boxes, UserRound } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { isAdmin, loginAdmin, logoutAdmin } from "@/lib/admin-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ const navItems = [
   { to: "/admin/produktet", label: "Produktet", icon: Boxes },
   { to: "/admin/importo", label: "Importo Excel", icon: FileSpreadsheet },
   { to: "/admin/porosite", label: "Porositë", icon: ClipboardList },
+  { to: "/admin/private", label: "Porosi Private", icon: UserRound },
 ];
 
 function AdminLayout() {
@@ -119,6 +121,9 @@ function AdminLayout() {
           })}
         </nav>
         <div className="space-y-2 border-t p-3">
+          <div className="px-1 pb-1">
+            <ThemeToggle />
+          </div>
           <Link
             to="/"
             className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent"
@@ -143,6 +148,8 @@ function AdminLayout() {
           <Link to="/admin" className="font-bold">
             FlladituKS Admin
           </Link>
+          <div className="flex items-center gap-2">
+          <ThemeToggle />
           <button
             onClick={() => {
               logoutAdmin();
@@ -152,6 +159,7 @@ function AdminLayout() {
           >
             Dil
           </button>
+          </div>
         </header>
         <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 md:hidden">
           {navItems.map((n) => {
