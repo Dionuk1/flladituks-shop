@@ -6,15 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CitySelect } from "@/components/ui/city-select";
 import { useCart } from "@/lib/cart";
-import { KOSOVO_CITIES, formatPrice } from "@/lib/cities";
+import { formatPrice } from "@/lib/cities";
 import { createOrder, getShippingPrice } from "@/lib/admin.functions";
 import { sendOrderNotification } from "@/lib/email-notify";
 import { toast } from "sonner";
@@ -95,6 +89,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
       try {
         const emailRes = await sendOrderNotification({
           orderId: res.id,
+          orderNo: res.order_no ?? null,
           customerName: parsed.data.customer_name,
           phone: parsed.data.phone,
           city: parsed.data.city,
@@ -168,18 +163,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
 
         <div>
           <Label>Qyteti *</Label>
-          <Select value={form.city} onValueChange={(v) => set("city", v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Zgjidh qytetin" />
-            </SelectTrigger>
-            <SelectContent>
-              {KOSOVO_CITIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <CitySelect value={form.city} onChange={(v) => set("city", v)} />
         </div>
 
         <div>

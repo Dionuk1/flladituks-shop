@@ -10,6 +10,7 @@ type OrderItem = { id: string; title: string; price: number; quantity: number };
 
 export type OrderNotificationPayload = {
   orderId: string;
+  orderNo?: number | null;
   customerName: string;
   phone: string;
   city: string;
@@ -69,6 +70,9 @@ export async function sendOrderNotification(payload: OrderNotificationPayload) {
     return { sent: false, reason: "no_admin_email" as const };
   }
 
+  const shortId =
+    payload.orderNo != null ? `#${payload.orderNo}` : `#${payload.orderId.slice(0, 6).toUpperCase()}`;
+
   const itemsText = payload.items
     .map((i) => `• ${i.title} × ${i.quantity} — ${fmt(i.price * i.quantity)}`)
     .join("\n");
@@ -77,7 +81,8 @@ export async function sendOrderNotification(payload: OrderNotificationPayload) {
     to_email,
     email: to_email,
     reply_to: to_email,
-    order_id: payload.orderId,
+    order_id: shortId,
+    order_uuid: payload.orderId,
     customer_name: payload.customerName,
     phone: payload.phone,
     city: payload.city,
@@ -87,7 +92,7 @@ export async function sendOrderNotification(payload: OrderNotificationPayload) {
     shipping_cost: fmt(payload.shippingCost),
     total: fmt(payload.total),
     payment_method: PAYMENT_LABELS[payload.paymentMethod ?? "cash_on_delivery"] ?? payload.paymentMethod ?? "",
-    subject: `Porosi e re #${payload.orderId.slice(0, 8)} — ${payload.customerName}`,
+    subject: `Porosi e re ${shortId} — ${payload.customerName}`,
   };
 
   console.log("[EmailJS] sending", { serviceId, templateId, to_email, order_id: payload.orderId });

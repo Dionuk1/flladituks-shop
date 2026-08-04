@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Package, ShoppingBag, Clock, CheckCircle2, PlusCircle, FileSpreadsheet, Flame } from "lucide-react";
-import { adminStats, adminListOrders, adminTopSelling } from "@/lib/admin.functions";
+import { Package, ShoppingBag, Clock, CheckCircle2, PlusCircle, FileSpreadsheet, Flame, Map as MapIcon, Trophy } from "lucide-react";
+import { adminStats, adminListOrders, adminTopSelling, adminCityAnalytics } from "@/lib/admin.functions";
+import { KosovoOrdersMap } from "@/components/admin/kosovo-map";
 import { requireToken } from "@/lib/admin-auth";
 import { formatPrice, statusLabel } from "@/lib/cities";
 
@@ -26,6 +27,13 @@ function AdminDashboard() {
   });
 
 
+
+  const { data: cityStats = [] } = useQuery({
+    queryKey: ["admin-city-analytics"],
+    queryFn: () => adminCityAnalytics({ data: { token: requireToken() } }),
+  });
+
+  const topCity = cityStats[0] ?? null;
 
   const cards = [
     { label: "Produkte", value: stats?.products ?? 0, icon: Package, color: "bg-primary/10 text-primary" },
@@ -77,6 +85,64 @@ function AdminDashboard() {
           </div>
           <FileSpreadsheet className="h-8 w-8 text-primary transition group-hover:scale-110" />
         </Link>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-2xl border bg-card p-4 shadow-sm lg:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-semibold">
+              <MapIcon className="h-4 w-4 text-primary" /> Harta e Porosive
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              Dyqani + porositë private
+            </span>
+          </div>
+          <KosovoOrdersMap stats={cityStats} />
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-2xl border bg-card p-4 shadow-sm">
+            <div className="mb-2 flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-warning" />
+              <h3 className="text-sm font-semibold">Qyteti Kryesor</h3>
+            </div>
+            {topCity ? (
+              <>
+                <p className="text-2xl font-bold text-primary">{topCity.city}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {topCity.total} porosi · {topCity.delivered} të dorëzuara ·{" "}
+                  {formatPrice(topCity.revenue)}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Ende pa të dhëna.</p>
+            )}
+          </div>
+
+          <div className="rounded-2xl border bg-card p-4 shadow-sm">
+            <div className="mb-2 flex items-center gap-2">
+              <Flame className="h-4 w-4 text-orange-500" />
+              <h3 className="text-sm font-semibold">Top 3 Produktet Më të Shitura</h3>
+            </div>
+            {topSelling.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ende pa shitje.</p>
+            ) : (
+              <ol className="space-y-2">
+                {topSelling.slice(0, 3).map((p, i) => (
+                  <li key={p.id || p.title} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                        {i + 1}
+                      </span>
+                      <span className="truncate">{p.title}</span>
+                    </span>
+                    <span className="shrink-0 font-semibold">{p.quantity} copë</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border bg-card shadow-sm">

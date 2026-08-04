@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Package2,
   Truck,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +36,12 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { requireToken } from "@/lib/admin-auth";
-import { KOSOVO_CITIES, ORDER_STATUSES, formatPrice, statusLabel } from "@/lib/cities";
+import {
+  KOSOVO_CITIES, ORDER_STATUSES, STATUS_QUICK_FILTERS, formatOrderNo, formatPrice,
+  statusLabel, statusBadgeClass, matchKosovoCity,
+} from "@/lib/cities";
+import { CitySelect } from "@/components/ui/city-select";
+import { ShippingLabelDialog, type ShippingLabelData } from "@/components/admin/shipping-label";
 import {
   adminListPrivateOrders,
   adminInsertPrivateOrders,
@@ -48,7 +54,12 @@ export const Route = createFileRoute("/admin/private")({
   component: PrivateOrdersPage,
 });
 
-type Row = PrivateOrderInput & { id: string; profit: number; created_at: string };
+type Row = PrivateOrderInput & {
+  id: string;
+  order_no: number | null;
+  profit: number;
+  created_at: string;
+};
 
 const EMPTY: PrivateOrderInput = {
   customer_name: "",
@@ -110,7 +121,9 @@ function parseOcrText(text: string): Partial<PrivateOrderInput> {
 
   const phone = joined.match(/(\+?\d[\d\s\-()]{6,17}\d)/)?.[1]?.trim() ?? "";
   const city =
-    KOSOVO_CITIES.find((c) => norm(joined).includes(norm(c))) ?? "";
+    KOSOVO_CITIES.find((c) => norm(joined).includes(norm(c))) ??
+    matchKosovoCity(joined) ??
+    "";
 
   let customer_name = "";
   for (const l of lines) {
@@ -145,6 +158,7 @@ function PrivateOrdersPage() {
   const [importing, setImporting] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [q, setQ] = useState("");
+  const [slip, setSlip] = useState<ShippingLabelData | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
 
@@ -156,7 +170,8 @@ function PrivateOrdersPage() {
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        if (statusFilter !== "all" && r.status !== statusFilter) return false;
+        const group = STATUS_QUICK_FILTERS.find((f) => f.key === statusFilter);
+        if (group && group.key !== "all" && !group.statuses.includes(r.status)) return false;
         if (q) {
           const hay = `${r.customer_name} ${r.phone} ${r.city} ${r.description}`.toLowerCase();
           if (!hay.includes(q.toLowerCase())) return false;
@@ -211,7 +226,9 @@ function PrivateOrdersPage() {
           customer_name: String(pickField(r, "customer_name") ?? "").trim(),
           phone: String(pickField(r, "phone") ?? "").trim(),
           country: String(pickField(r, "country") ?? "Kosovë").trim() || "Kosovë",
-          city: String(pickField(r, "city") ?? "").trim(),
+          city:
+            matchKosovoCity(String(pickField(r, "city") ?? "")) ??
+            String(pickField(r, "city") ?? "").trim(),
           address: String(pickField(r, "address") ?? "").trim(),
           description: String(pickField(r, "description") ?? "").trim(),
           cost_price: toNum(pickField(r, "cost_price")),
@@ -379,25 +396,41 @@ function PrivateOrdersPage() {
           onChange={(e) => setQ(e.target.value)}
           className="max-w-xs"
         />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Statusi" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Të gjitha statuset</SelectItem>
-            {ORDER_STATUSES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+          {STATUS_QUICK_FILTERS.map((f) => {
+            const count =
+              f.key === "all"
+                ? rows.length
+                : rows.filter((r) => f.statuses.includes(r.status)).length;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setStatusFilter(f.key)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                  statusFilter === f.key
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-card hover:bg-secondary"
+                }`}
+              >
+                {f.label}
+                <span
+                  className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] ${
+                    statusFilter === f.key ? "bg-primary-foreground/20" : "bg-secondary"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border bg-card shadow-sm">
         <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-secondary/60 text-left text-xs uppercase text-muted-foreground">
             <tr>
+              <th className="px-4 py-3">ID</th>
               <th className="px-4 py-3">Klienti</th>
               <th className="px-4 py-3">Kontakti</th>
               <th className="px-4 py-3">Destinacioni</th>
@@ -413,20 +446,23 @@ function PrivateOrdersPage() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                 </td>
               </tr>
             )}
             {!isLoading && filtered.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">
                   Nuk ka porosi private.
                 </td>
               </tr>
             )}
             {filtered.map((r) => (
               <tr key={r.id} className="border-t">
+                <td className="px-4 py-3 font-mono text-xs font-bold text-muted-foreground">
+                  {formatOrderNo(r.order_no, r.id)}
+                </td>
                 <td className="px-4 py-3 font-medium">{r.customer_name}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{r.phone || "—"}</td>
                 <td className="px-4 py-3">
@@ -445,12 +481,40 @@ function PrivateOrdersPage() {
                   {formatPrice(r.profit)}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="rounded-full bg-secondary px-2 py-1 text-xs">
+                  <span
+                    className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass(r.status)}`}
+                  >
                     {statusLabel(r.status)}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Printo etiketën"
+                      onClick={() =>
+                        setSlip({
+                          id: r.id,
+                          order_no: r.order_no,
+                          customer_name: r.customer_name,
+                          phone: r.phone ?? "",
+                          city: r.city ?? "",
+                          country: r.country ?? "Kosovë",
+                          address: r.address ?? "",
+                          items: [
+                            {
+                              title: r.description || "Porosi private",
+                              quantity: 1,
+                              price: Number(r.selling_price ?? 0),
+                            },
+                          ],
+                          total: Number(r.selling_price ?? 0),
+                        })
+                      }
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -492,6 +556,8 @@ function PrivateOrdersPage() {
         </table>
       </div>
 
+      <ShippingLabelDialog order={slip} open={!!slip} onOpenChange={(v) => !v && setSlip(null)} />
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
@@ -518,7 +584,7 @@ function PrivateOrdersPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label>Qyteti</Label>
-                <Input value={form.city} onChange={(e) => set("city", e.target.value)} />
+                <CitySelect value={form.city} onChange={(v) => set("city", v)} />
               </div>
               <div>
                 <Label>Statusi</Label>

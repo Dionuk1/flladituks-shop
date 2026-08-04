@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings,
-  FileSpreadsheet, FileText, MessageCircle, AlertTriangle, Send, Download, FileDown,
+  FileSpreadsheet, FileText, MessageCircle, AlertTriangle, Send, Download, FileDown, Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,11 @@ import {
   getEmailJsConfig, adminSetEmailJsConfig,
 } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
-import { ORDER_STATUSES, formatPrice, statusLabel, type OrderStatus } from "@/lib/cities";
+import {
+  ORDER_STATUSES, STATUS_QUICK_FILTERS, formatOrderNo, formatPrice, statusLabel,
+  statusBadgeClass, type OrderStatus,
+} from "@/lib/cities";
+import { ShippingLabelDialog, type ShippingLabelData } from "@/components/admin/shipping-label";
 import { exportOrdersToExcel, exportFinancialsToPDF, exportInvoiceToPDF, buildWhatsAppLink } from "@/lib/exports";
 import { toast } from "sonner";
 
@@ -36,6 +40,7 @@ export const Route = createFileRoute("/admin/porosite")({
 
 type Order = {
   id: string;
+  order_no: number | null;
   customer_name: string;
   phone: string;
   city: string;
@@ -61,10 +66,13 @@ function OrdersPage() {
     },
   });
 
-  const filtered = useMemo(
-    () => (filter === "all" ? orders : orders.filter((o) => o.status === filter)),
-    [orders, filter],
-  );
+  const filtered = useMemo(() => {
+    const group = STATUS_QUICK_FILTERS.find((f) => f.key === filter);
+    if (!group || group.key === "all") return orders;
+    return orders.filter((o) => group.statuses.includes(o.status as string));
+  }, [orders, filter]);
+
+  const [slipOrder, setSlipOrder] = useState<ShippingLabelData | null>(null);
 
   // State for the rejection reason modal
   const [rejectTarget, setRejectTarget] = useState<Order | null>(null);
@@ -121,8 +129,11 @@ function OrdersPage() {
   }
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: orders.length };
-    for (const s of ORDER_STATUSES) c[s.value] = orders.filter((o) => o.status === s.value).length;
+    const c: Record<string, number> = {};
+    for (const f of STATUS_QUICK_FILTERS)
+      c[f.key] = f.key === "all"
+        ? orders.length
+        : orders.filter((o) => f.statuses.includes(o.status as string)).length;
     return c;
   }, [orders]);
 
@@ -195,17 +206,14 @@ function OrdersPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <FilterChip active={filter === "all"} onClick={() => setFilter("all")} count={counts.all}>
-          Të gjitha
-        </FilterChip>
-        {ORDER_STATUSES.map((s) => (
+        {STATUS_QUICK_FILTERS.map((f) => (
           <FilterChip
-            key={s.value}
-            active={filter === s.value}
-            onClick={() => setFilter(s.value)}
-            count={counts[s.value] ?? 0}
+            key={f.key}
+            active={filter === f.key}
+            onClick={() => setFilter(f.key)}
+            count={counts[f.key] ?? 0}
           >
-            {s.label}
+            {f.label}
           </FilterChip>
         ))}
       </div>
@@ -225,8 +233,14 @@ function OrdersPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-sm font-bold text-muted-foreground">
+                        {formatOrderNo(o.order_no, o.id)}
+                      </span>
                       <h3 className="font-semibold">{o.customer_name}</h3>
-                      <Badge variant="outline" className="rounded-full text-xs">
+                      <Badge
+                        variant="outline"
+                        className={`rounded-full text-xs font-semibold ${statusBadgeClass(o.status)}`}
+                      >
                         {statusLabel(o.status)}
                       </Badge>
                       {isRisky && (
@@ -296,6 +310,25 @@ function OrdersPage() {
                   </Button>
                   <Button
                     variant="outline" size="sm"
+                    onClick={() =>
+                      setSlipOrder({
+                        id: o.id,
+                        order_no: o.order_no,
+                        customer_name: o.customer_name,
+                        phone: o.phone,
+                        city: o.city,
+                        country: "Kosovë",
+                        address: o.address,
+                        items: o.items ?? [],
+                        total: o.total,
+                      })
+                    }
+                    className="rounded-full"
+                  >
+                    <Printer className="mr-1 h-4 w-4" /> Printo Etiketën
+                  </Button>
+                  <Button
+                    variant="outline" size="sm"
                     onClick={() => exportInvoiceToPDF(o)}
                     className="rounded-full"
                   >
@@ -313,6 +346,12 @@ function OrdersPage() {
           })}
         </ul>
       )}
+
+      <ShippingLabelDialog
+        order={slipOrder}
+        open={!!slipOrder}
+        onOpenChange={(v) => !v && setSlipOrder(null)}
+      />
 
       <Dialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>
         <DialogContent>

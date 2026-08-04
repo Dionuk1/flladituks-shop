@@ -9,24 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as PorosiaIdRouteImport } from './routes/porosia.$id'
-import { Route as AdminShtoRouteImport } from './routes/admin.shto'
-import { Route as AdminProduktetRouteImport } from './routes/admin.produktet'
-import { Route as AdminPrivateRouteImport } from './routes/admin.private'
-import { Route as AdminPorositeRouteImport } from './routes/admin.porosite'
 import { Route as AdminImportoRouteImport } from './routes/admin.importo'
+import { Route as AdminPorositeRouteImport } from './routes/admin.porosite'
+import { Route as AdminPrivateRouteImport } from './routes/admin.private'
+import { Route as AdminProduktetRouteImport } from './routes/admin.produktet'
+import { Route as AdminShtoRouteImport } from './routes/admin.shto'
+import { Route as PorosiaIdRouteImport } from './routes/porosia.$id'
 
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -34,24 +34,9 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
-const PorosiaIdRoute = PorosiaIdRouteImport.update({
-  id: '/porosia/$id',
-  path: '/porosia/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminShtoRoute = AdminShtoRouteImport.update({
-  id: '/shto',
-  path: '/shto',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminProduktetRoute = AdminProduktetRouteImport.update({
-  id: '/produktet',
-  path: '/produktet',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminPrivateRoute = AdminPrivateRouteImport.update({
-  id: '/private',
-  path: '/private',
+const AdminImportoRoute = AdminImportoRouteImport.update({
+  id: '/importo',
+  path: '/importo',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPorositeRoute = AdminPorositeRouteImport.update({
@@ -59,10 +44,25 @@ const AdminPorositeRoute = AdminPorositeRouteImport.update({
   path: '/porosite',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminImportoRoute = AdminImportoRouteImport.update({
-  id: '/importo',
-  path: '/importo',
+const AdminPrivateRoute = AdminPrivateRouteImport.update({
+  id: '/private',
+  path: '/private',
   getParentRoute: () => AdminRoute,
+} as any)
+const AdminProduktetRoute = AdminProduktetRouteImport.update({
+  id: '/produktet',
+  path: '/produktet',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShtoRoute = AdminShtoRouteImport.update({
+  id: '/shto',
+  path: '/shto',
+  getParentRoute: () => AdminRoute,
+} as any)
+const PorosiaIdRoute = PorosiaIdRouteImport.update({
+  id: '/porosia/$id',
+  path: '/porosia/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -141,18 +141,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -162,32 +162,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/porosia/$id': {
-      id: '/porosia/$id'
-      path: '/porosia/$id'
-      fullPath: '/porosia/$id'
-      preLoaderRoute: typeof PorosiaIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/shto': {
-      id: '/admin/shto'
-      path: '/shto'
-      fullPath: '/admin/shto'
-      preLoaderRoute: typeof AdminShtoRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/produktet': {
-      id: '/admin/produktet'
-      path: '/produktet'
-      fullPath: '/admin/produktet'
-      preLoaderRoute: typeof AdminProduktetRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/private': {
-      id: '/admin/private'
-      path: '/private'
-      fullPath: '/admin/private'
-      preLoaderRoute: typeof AdminPrivateRouteImport
+    '/admin/importo': {
+      id: '/admin/importo'
+      path: '/importo'
+      fullPath: '/admin/importo'
+      preLoaderRoute: typeof AdminImportoRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/porosite': {
@@ -197,12 +176,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPorositeRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/importo': {
-      id: '/admin/importo'
-      path: '/importo'
-      fullPath: '/admin/importo'
-      preLoaderRoute: typeof AdminImportoRouteImport
+    '/admin/private': {
+      id: '/admin/private'
+      path: '/private'
+      fullPath: '/admin/private'
+      preLoaderRoute: typeof AdminPrivateRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/admin/produktet': {
+      id: '/admin/produktet'
+      path: '/produktet'
+      fullPath: '/admin/produktet'
+      preLoaderRoute: typeof AdminProduktetRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shto': {
+      id: '/admin/shto'
+      path: '/shto'
+      fullPath: '/admin/shto'
+      preLoaderRoute: typeof AdminShtoRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/porosia/$id': {
+      id: '/porosia/$id'
+      path: '/porosia/$id'
+      fullPath: '/porosia/$id'
+      preLoaderRoute: typeof PorosiaIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
