@@ -89,6 +89,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
       try {
         const emailRes = await sendOrderNotification({
           orderId: res.id,
+          orderNo: res.order_no ?? null,
           customerName: parsed.data.customer_name,
           phone: parsed.data.phone,
           city: parsed.data.city,
