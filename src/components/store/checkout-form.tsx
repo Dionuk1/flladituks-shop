@@ -162,18 +162,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
 
         <div>
           <Label>Qyteti *</Label>
-          <Select value={form.city} onValueChange={(v) => set("city", v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Zgjidh qytetin" />
-            </SelectTrigger>
-            <SelectContent>
-              {KOSOVO_CITIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <CitySelect value={form.city} onChange={(v) => set("city", v)} />
         </div>
 
         <div>
