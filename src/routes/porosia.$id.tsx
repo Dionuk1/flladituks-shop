@@ -2,7 +2,7 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, MapPin, Phone, Printer, Package2, ArrowLeft, FileDown, Truck, XCircle } from "lucide-react";
 import { getOrderById, cancelOrderByCustomer } from "@/lib/admin.functions";
-import { formatPrice, statusLabel } from "@/lib/cities";
+import { formatOrderNo, formatPrice, statusLabel, statusBadgeClass } from "@/lib/cities";
 import { exportInvoiceToPDF } from "@/lib/exports";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -106,7 +106,9 @@ function InvoicePage() {
           <div className="grid gap-4 p-6 sm:grid-cols-2">
             <div>
               <p className="text-xs font-medium uppercase text-muted-foreground">Numri i porosisë</p>
-              <p className="mt-1 break-all font-mono text-sm">{data.id}</p>
+              <p className="mt-1 font-mono text-lg font-bold">
+                {formatOrderNo((data as any).order_no, data.id)}
+              </p>
             </div>
             <div>
               <p className="text-xs font-medium uppercase text-muted-foreground">Data</p>
@@ -114,7 +116,11 @@ function InvoicePage() {
             </div>
             <div>
               <p className="text-xs font-medium uppercase text-muted-foreground">Statusi</p>
-              <p className="mt-1 text-sm font-medium">{statusLabel(data.status)}</p>
+              <span
+                className={`mt-1 inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass(data.status)}`}
+              >
+                {statusLabel(data.status)}
+              </span>
             </div>
             <div>
               <p className="text-xs font-medium uppercase text-muted-foreground">Pagesa</p>
