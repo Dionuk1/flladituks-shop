@@ -41,6 +41,7 @@ export type Database = {
           id: string
           items: Json
           notes: string | null
+          order_no: number | null
           payment_method: string
           phone: string
           shipping_cost: number
@@ -56,6 +57,7 @@ export type Database = {
           id?: string
           items?: Json
           notes?: string | null
+          order_no?: number | null
           payment_method?: string
           phone: string
           shipping_cost?: number
@@ -71,6 +73,7 @@ export type Database = {
           id?: string
           items?: Json
           notes?: string | null
+          order_no?: number | null
           payment_method?: string
           phone?: string
           shipping_cost?: number
@@ -91,6 +94,7 @@ export type Database = {
           description: string
           id: string
           notes: string | null
+          order_no: number | null
           phone: string
           profit: number | null
           selling_price: number
@@ -108,6 +112,7 @@ export type Database = {
           description?: string
           id?: string
           notes?: string | null
+          order_no?: number | null
           phone?: string
           profit?: number | null
           selling_price?: number
@@ -125,6 +130,7 @@ export type Database = {
           description?: string
           id?: string
           notes?: string | null
+          order_no?: number | null
           phone?: string
           profit?: number | null
           selling_price?: number
