@@ -151,3 +151,20 @@
 @utility gradient-brand {
   background-image: linear-gradient(135deg, oklch(0.7 0.14 215), oklch(0.55 0.17 245));
 }
+
+@media print {
+  body.printing-slip * {
+    visibility: hidden !important;
+  }
+  body.printing-slip #shipping-slip,
+  body.printing-slip #shipping-slip * {
+    visibility: visible !important;
+  }
+  body.printing-slip #shipping-slip {
+    position: fixed;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border: none;
+    padding: 0;
+  }
+}
