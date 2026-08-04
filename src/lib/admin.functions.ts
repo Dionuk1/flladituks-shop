@@ -747,3 +747,33 @@ export const adminDeletePrivateOrder = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// =================== City analytics (Harta e Porosive) ===================
+
+export const adminCityAnalytics = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [store, priv] = await Promise.all([
+      supabaseAdmin.from("orders").select("city, status, total"),
+      supabaseAdmin.from("private_orders").select("city, status, selling_price"),
+    ]);
+
+    const acc: Record<string, { city: string; total: number; delivered: number; revenue: number }> = {};
+    const add = (city: string, status: string, amount: number) => {
+      const key = (city ?? "").trim();
+      if (!key) return;
+      if (!acc[key]) acc[key] = { city: key, total: 0, delivered: 0, revenue: 0 };
+      acc[key].total += 1;
+      if (status === "completed" || status === "shipped") {
+        acc[key].delivered += 1;
+        acc[key].revenue += Number(amount ?? 0);
+      }
+    };
+
+    for (const r of (store.data ?? []) as any[]) add(r.city, r.status, r.total);
+    for (const r of (priv.data ?? []) as any[]) add(r.city, r.status, r.selling_price);
+
+    return Object.values(acc).sort((a, b) => b.total - a.total);
+  });
