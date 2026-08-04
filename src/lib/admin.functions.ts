@@ -471,14 +471,14 @@ export const createOrder = createServerFn({ method: "POST" })
         payment_method: data.payment_method,
         status: "pending",
       })
-      .select("id")
+      .select("id, order_no")
       .single();
     if (error || !row) throw new Error(error?.message ?? "Gabim te porosia");
 
     // --- Decrement stock immediately (reserve) ---
     await decrementStockForOrder(data.items);
 
-    return { id: row.id };
+    return { id: row.id, order_no: (row as any).order_no as number | null };
   });
 
 export const getOrderById = createServerFn({ method: "GET" })
