@@ -518,11 +518,11 @@ function PrivateOrdersPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      title="Printo etiketën"
-                      onClick={() =>
+                    <OrderQuickActions
+                      phone={r.phone}
+                      status={r.status}
+                      onStatusChange={(status: string) => changeStatus.mutate({ row: r, status })}
+                      onPrint={() =>
                         setSlip({
                           id: r.id,
                           order_no: r.order_no,
@@ -541,9 +541,8 @@ function PrivateOrdersPage() {
                           total: Number(r.selling_price ?? 0),
                         })
                       }
-                    >
-                      <Printer className="h-4 w-4" />
-                    </Button>
+                    />
+
                     <Button
                       size="icon"
                       variant="ghost"
