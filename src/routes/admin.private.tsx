@@ -214,6 +214,35 @@ function PrivateOrdersPage() {
     onError: (e: any) => toast.error("Gabim", { description: e?.message }),
   });
 
+  const changeStatus = useMutation({
+    mutationFn: async ({ row, status }: { row: any; status: string }) =>
+      adminUpdatePrivateOrder({
+        data: {
+          token: requireToken(),
+          id: row.id,
+          order: {
+            customer_name: row.customer_name,
+            phone: row.phone ?? "",
+            country: row.country ?? "Kosovë",
+            city: row.city ?? "",
+            address: row.address ?? "",
+            description: row.description ?? "",
+            cost_price: Number(row.cost_price ?? 0),
+            selling_price: Number(row.selling_price ?? 0),
+            shipping_cost: Number(row.shipping_cost ?? 0),
+            status,
+            notes: row.notes ?? "",
+          },
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Statusi u përditësua");
+      qc.invalidateQueries({ queryKey: ["private-orders"] });
+    },
+    onError: (e: any) => toast.error("Gabim", { description: e?.message }),
+  });
+
+
   async function handleExcel(file: File) {
     setImporting(true);
     try {
