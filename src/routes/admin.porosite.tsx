@@ -5,6 +5,7 @@ import {
   Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings,
   FileSpreadsheet, FileText, MessageCircle, AlertTriangle, Send, Download, FileDown, Printer,
 } from "lucide-react";
+import { OrderQuickActions } from "@/components/admin/order-quick-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -266,7 +267,7 @@ function OrdersPage() {
                       className="mt-2 justify-end"
                       phone={o.phone}
                       status={o.status}
-                      onStatusChange={(v) => handleStatusChange(o, v)}
+                      onStatusChange={(v: string) => handleStatusChange(o, v)}
                       onPrint={() =>
                         setSlipOrder({
                           id: o.id,
