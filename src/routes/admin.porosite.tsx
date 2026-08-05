@@ -259,10 +259,30 @@ function OrdersPage() {
                       <span>{new Date(o.created_at).toLocaleString("sq")}</span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <p className="text-lg font-bold text-primary">{formatPrice(o.total)}</p>
                     <p className="text-xs text-muted-foreground">Pagesa në dorë</p>
+                    <OrderQuickActions
+                      className="mt-2 justify-end"
+                      phone={o.phone}
+                      status={o.status}
+                      onStatusChange={(v) => handleStatusChange(o, v)}
+                      onPrint={() =>
+                        setSlipOrder({
+                          id: o.id,
+                          order_no: o.order_no,
+                          customer_name: o.customer_name,
+                          phone: o.phone,
+                          city: o.city,
+                          country: "Kosovë",
+                          address: o.address,
+                          items: o.items ?? [],
+                          total: o.total,
+                        })
+                      }
+                    />
                   </div>
+
                 </div>
 
                 <div className="mt-3 rounded-xl bg-secondary/40 p-3">
