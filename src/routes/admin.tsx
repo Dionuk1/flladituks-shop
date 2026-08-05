@@ -1,11 +1,12 @@
 import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock, Boxes, UserRound } from "lucide-react";
+import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock, Boxes, UserRound, Menu, Coins } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { isAdmin, loginAdmin, logoutAdmin } from "@/lib/admin-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
@@ -19,12 +20,14 @@ const navItems = [
   { to: "/admin/importo", label: "Importo Excel", icon: FileSpreadsheet },
   { to: "/admin/porosite", label: "Porositë", icon: ClipboardList },
   { to: "/admin/private", label: "Porosi Private", icon: UserRound },
+  { to: "/admin/financat", label: "Financat", icon: Coins },
 ];
 
 function AdminLayout() {
   const [authed, setAuthed] = useState(false);
   const [checked, setChecked] = useState(false);
   const [password, setPassword] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
@@ -34,6 +37,7 @@ function AdminLayout() {
   }, []);
 
   if (!checked) return null;
+
 
   if (!authed) {
     return (
