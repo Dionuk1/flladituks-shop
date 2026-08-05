@@ -14,8 +14,8 @@ import {
   TrendingUp,
   Package2,
   Truck,
-  Printer,
 } from "lucide-react";
+import { OrderQuickActions } from "@/components/admin/order-quick-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
