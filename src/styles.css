@@ -153,6 +153,10 @@
 }
 
 @media print {
+  @page {
+    size: 100mm 150mm;
+    margin: 4mm;
+  }
   body.printing-slip * {
     visibility: hidden !important;
   }
@@ -163,8 +167,11 @@
   body.printing-slip #shipping-slip {
     position: fixed;
     inset: 0 auto auto 0;
-    width: 100%;
+    width: 92mm;
+    max-width: 92mm;
     border: none;
     padding: 0;
+    color: #000;
+    background: #fff;
   }
 }

@@ -14,8 +14,8 @@ import {
   TrendingUp,
   Package2,
   Truck,
-  Printer,
 } from "lucide-react";
+import { OrderQuickActions } from "@/components/admin/order-quick-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -213,6 +213,35 @@ function PrivateOrdersPage() {
     },
     onError: (e: any) => toast.error("Gabim", { description: e?.message }),
   });
+
+  const changeStatus = useMutation({
+    mutationFn: async ({ row, status }: { row: any; status: string }) =>
+      adminUpdatePrivateOrder({
+        data: {
+          token: requireToken(),
+          id: row.id,
+          order: {
+            customer_name: row.customer_name,
+            phone: row.phone ?? "",
+            country: row.country ?? "Kosovë",
+            city: row.city ?? "",
+            address: row.address ?? "",
+            description: row.description ?? "",
+            cost_price: Number(row.cost_price ?? 0),
+            selling_price: Number(row.selling_price ?? 0),
+            shipping_cost: Number(row.shipping_cost ?? 0),
+            status,
+            notes: row.notes ?? "",
+          },
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Statusi u përditësua");
+      qc.invalidateQueries({ queryKey: ["private-orders"] });
+    },
+    onError: (e: any) => toast.error("Gabim", { description: e?.message }),
+  });
+
 
   async function handleExcel(file: File) {
     setImporting(true);
@@ -489,11 +518,11 @@ function PrivateOrdersPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      title="Printo etiketën"
-                      onClick={() =>
+                    <OrderQuickActions
+                      phone={r.phone}
+                      status={r.status}
+                      onStatusChange={(status: string) => changeStatus.mutate({ row: r, status })}
+                      onPrint={() =>
                         setSlip({
                           id: r.id,
                           order_no: r.order_no,
@@ -512,9 +541,8 @@ function PrivateOrdersPage() {
                           total: Number(r.selling_price ?? 0),
                         })
                       }
-                    >
-                      <Printer className="h-4 w-4" />
-                    </Button>
+                    />
+
                     <Button
                       size="icon"
                       variant="ghost"

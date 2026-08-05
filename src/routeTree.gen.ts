@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminFinancatRouteImport } from './routes/admin.financat'
 import { Route as AdminImportoRouteImport } from './routes/admin.importo'
 import { Route as AdminPorositeRouteImport } from './routes/admin.porosite'
 import { Route as AdminPrivateRouteImport } from './routes/admin.private'
@@ -32,6 +33,11 @@ const AdminRoute = AdminRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFinancatRoute = AdminFinancatRouteImport.update({
+  id: '/financat',
+  path: '/financat',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminImportoRoute = AdminImportoRouteImport.update({
@@ -68,6 +74,7 @@ const PorosiaIdRoute = PorosiaIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
   '/admin/private': typeof AdminPrivateRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
   '/admin/private': typeof AdminPrivateRoute
@@ -90,6 +98,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
   '/admin/private': typeof AdminPrivateRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
     | '/admin/private'
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
     | '/admin/private'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
     | '/admin/private'
@@ -160,6 +172,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/financat': {
+      id: '/admin/financat'
+      path: '/financat'
+      fullPath: '/admin/financat'
+      preLoaderRoute: typeof AdminFinancatRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/importo': {
@@ -208,6 +227,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminFinancatRoute: typeof AdminFinancatRoute
   AdminImportoRoute: typeof AdminImportoRoute
   AdminPorositeRoute: typeof AdminPorositeRoute
   AdminPrivateRoute: typeof AdminPrivateRoute
@@ -217,6 +237,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminFinancatRoute: AdminFinancatRoute,
   AdminImportoRoute: AdminImportoRoute,
   AdminPorositeRoute: AdminPorositeRoute,
   AdminPrivateRoute: AdminPrivateRoute,
