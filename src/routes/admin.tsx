@@ -147,42 +147,72 @@ function AdminLayout() {
         </div>
       </aside>
 
-      <div className="flex-1">
-        <header className="flex items-center justify-between border-b bg-card px-4 py-3 md:hidden">
-          <Link to="/admin" className="font-bold">
+      <div className="min-w-0 flex-1">
+        <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-3 py-3 md:hidden">
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="rounded-full" aria-label="Hap menynë">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <SheetHeader className="border-b px-5 py-4 text-left">
+                <SheetTitle className="flex items-center gap-2">
+                  <span className="grid h-8 w-8 place-items-center rounded-xl gradient-brand text-white">
+                    <Package className="h-4 w-4" />
+                  </span>
+                  FlladituKS Admin
+                </SheetTitle>
+              </SheetHeader>
+              <nav className="space-y-1 p-3">
+                {navItems.map((n) => {
+                  const active = n.exact ? pathname === n.to : pathname.startsWith(n.to);
+                  const Icon = n.icon;
+                  return (
+                    <Link
+                      key={n.to}
+                      to={n.to}
+                      onClick={() => setMenuOpen(false)}
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                        active
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "hover:bg-secondary"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {n.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+              <div className="space-y-1 border-t p-3">
+                <Link
+                  to="/"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-secondary"
+                >
+                  <Store className="h-4 w-4" /> Shiko dyqanin
+                </Link>
+                <button
+                  onClick={() => {
+                    logoutAdmin();
+                    setAuthed(false);
+                    setMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="h-4 w-4" /> Dil
+                </button>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Link to="/admin" className="truncate font-bold">
             FlladituKS Admin
           </Link>
-          <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button
-            onClick={() => {
-              logoutAdmin();
-              setAuthed(false);
-            }}
-            className="text-sm text-destructive"
-          >
-            Dil
-          </button>
-          </div>
         </header>
-        <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 md:hidden">
-          {navItems.map((n) => {
-            const active = n.exact ? pathname === n.to : pathname.startsWith(n.to);
-            const Icon = n.icon;
-            return (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${
-                  active ? "bg-primary text-primary-foreground" : "bg-secondary"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {n.label}
-              </Link>
-            );
-          })}
-        </nav>
+
         <main className="p-4 sm:p-6">
           <Outlet />
         </main>
