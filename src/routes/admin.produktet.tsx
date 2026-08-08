@@ -62,6 +62,7 @@ type Product = {
   stock: number;
   status: string;
   shipping_cost: number | null;
+  cost_price: number | null;
 };
 
 const MAX_IMAGES = 3;
