@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bar,
   BarChart,
@@ -16,11 +16,46 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Coins, TrendingUp, Truck, Wallet, Loader2, FileSpreadsheet, FileText } from "lucide-react";
+import {
+  Coins,
+  TrendingUp,
+  Truck,
+  Wallet,
+  Loader2,
+  FileSpreadsheet,
+  FileText,
+  Plus,
+  Trash2,
+  Receipt,
+} from "lucide-react";
 import { requireToken } from "@/lib/admin-auth";
-import { adminListOrders, adminListPrivateOrders } from "@/lib/admin.functions";
+import {
+  adminAddExpense,
+  adminDeleteExpense,
+  adminListExpenses,
+  adminListOrders,
+  adminListPrivateOrders,
+} from "@/lib/admin.functions";
 import { formatPrice } from "@/lib/cities";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 import { exportFinancialsToPDF, exportOrdersToExcel } from "@/lib/exports";
 
 export const Route = createFileRoute("/admin/financat")({
@@ -30,12 +65,12 @@ export const Route = createFileRoute("/admin/financat")({
       { title: "Financat — Paneli FlladituKS" },
       {
         name: "description",
-        content: "Pasqyra financiare e FlladituKS: xhiroja, kostot e postës dhe fitimi neto.",
+        content: "Pasqyra financiare e FlladituKS: xhiroja, shpenzimet operative dhe fitimi neto real.",
       },
       { property: "og:title", content: "Financat — Paneli FlladituKS" },
       {
         property: "og:description",
-        content: "Pasqyra financiare e FlladituKS: xhiroja, kostot e postës dhe fitimi neto.",
+        content: "Pasqyra financiare e FlladituKS: xhiroja, shpenzimet operative dhe fitimi neto real.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -45,6 +80,50 @@ export const Route = createFileRoute("/admin/financat")({
 
 const CONFIRMED = ["processing", "shipped", "completed"];
 const MONTHS = ["Jan", "Shk", "Mar", "Pri", "Maj", "Qer", "Kor", "Gsh", "Sht", "Tet", "Nën", "Dhj"];
+
+const EXPENSE_CATEGORIES = [
+  "Reklama (Instagram/Meta)",
+  "Paketimi",
+  "Karburant / Logjistikë",
+  "Pajisje",
+  "Tjetër",
+];
+
+type Preset = "today" | "week" | "month" | "lastMonth" | "all" | "custom";
+
+const PRESETS: Array<{ value: Preset; label: string }> = [
+  { value: "today", label: "Sot" },
+  { value: "week", label: "Këtë Javë" },
+  { value: "month", label: "Këtë Muaj" },
+  { value: "lastMonth", label: "Muajin e Kaluar" },
+  { value: "all", label: "Të gjitha" },
+];
+
+function toKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Resolve a preset into an inclusive [from, to] range of yyyy-mm-dd strings. */
+function presetRange(p: Preset): { from: string; to: string } {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (p === "today") return { from: toKey(today), to: toKey(today) };
+  if (p === "week") {
+    const dow = (today.getDay() + 6) % 7; // Monday-first
+    const start = new Date(today);
+    start.setDate(today.getDate() - dow);
+    return { from: toKey(start), to: toKey(today) };
+  }
+  if (p === "month") {
+    return { from: toKey(new Date(now.getFullYear(), now.getMonth(), 1)), to: toKey(today) };
+  }
+  if (p === "lastMonth") {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { from: toKey(start), to: toKey(end) };
+  }
+  return { from: "", to: "" };
+}
 
 function Kpi({
   label,
@@ -81,8 +160,121 @@ function Kpi({
   );
 }
 
+function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [spentAt, setSpentAt] = useState(toKey(new Date()));
+
+  const m = useMutation({
+    mutationFn: async () => {
+      const value = Number(amount);
+      if (!Number.isFinite(value) || value <= 0) throw new Error("Shuma është e pavlefshme");
+      await adminAddExpense({
+        data: {
+          token: requireToken(),
+          category,
+          description: description.trim(),
+          amount: value,
+          spent_at: spentAt,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Shpenzimi u regjistrua");
+      setDescription("");
+      setAmount("");
+      setOpen(false);
+      onSaved();
+    },
+    onError: (e: Error) => toast.error("Gabim", { description: e.message }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="rounded-full">
+          <Plus className="mr-1.5 h-4 w-4" /> Shto Shpenzim
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Shto Shpenzim Operativ</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Kategoria</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPENSE_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="exp-desc">Përshkrimi</Label>
+            <Input
+              id="exp-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="P.sh. Reklamë Instagram — javë"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="exp-amount">Shuma (€) *</Label>
+              <Input
+                id="exp-amount"
+                type="number"
+                step="0.01"
+                min={0}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="exp-date">Data</Label>
+              <Input
+                id="exp-date"
+                type="date"
+                value={spentAt}
+                onChange={(e) => setSpentAt(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            onClick={() => m.mutate()}
+            disabled={m.isPending}
+            className="w-full rounded-full"
+          >
+            {m.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Ruaj Shpenzimin
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function FinancePage() {
-  const [range, setRange] = useState<"30" | "90" | "all">("30");
+  const qc = useQueryClient();
+  const [preset, setPreset] = useState<Preset>("month");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  const range = useMemo(() => {
+    if (preset === "custom") return { from: customFrom, to: customTo };
+    return presetRange(preset);
+  }, [preset, customFrom, customTo]);
 
   const ordersQ = useQuery({
     queryKey: ["admin", "orders", "fin"],
@@ -92,16 +284,33 @@ function FinancePage() {
     queryKey: ["admin", "private", "fin"],
     queryFn: () => adminListPrivateOrders({ data: { token: requireToken() } }),
   });
+  const expQ = useQuery({
+    queryKey: ["admin", "expenses"],
+    queryFn: () => adminListExpenses({ data: { token: requireToken() } }),
+  });
 
-  const loading = ordersQ.isLoading || privQ.isLoading;
+  const delExpense = useMutation({
+    mutationFn: (id: string) => adminDeleteExpense({ data: { token: requireToken(), id } }),
+    onSuccess: () => {
+      toast.success("Shpenzimi u fshi");
+      qc.invalidateQueries({ queryKey: ["admin", "expenses"] });
+    },
+    onError: (e: Error) => toast.error("Gabim", { description: e.message }),
+  });
+
+  const loading = ordersQ.isLoading || privQ.isLoading || expQ.isLoading;
 
   const data = useMemo(() => {
-    const since =
-      range === "all" ? 0 : Date.now() - Number(range) * 24 * 60 * 60 * 1000;
-    const inRange = (d: string) => new Date(d).getTime() >= since;
+    const fromTs = range.from ? new Date(`${range.from}T00:00:00`).getTime() : Number.NEGATIVE_INFINITY;
+    const toTs = range.to ? new Date(`${range.to}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
+    const inRange = (d: string) => {
+      const t = new Date(d).getTime();
+      return t >= fromTs && t <= toTs;
+    };
 
     const orders = (ordersQ.data ?? []).filter((o: any) => inRange(o.created_at));
     const privates = (privQ.data ?? []).filter((p: any) => inRange(p.created_at));
+    const expenses = (expQ.data ?? []).filter((e: any) => inRange(`${e.spent_at}T12:00:00`));
 
     const confirmedOrders = orders.filter((o: any) => CONFIRMED.includes(o.status));
     const confirmedPrivate = privates.filter((p: any) => CONFIRMED.includes(p.status));
@@ -126,7 +335,12 @@ function FinancePage() {
 
     const gross = storeGross + privGross;
     const shippingCosts = storeShipping + privShipping;
+    const operating = expenses.reduce((s: number, e: any) => s + Number(e.amount ?? 0), 0);
     const net = gross - shippingCosts - privCost;
+    const realNet = net - operating;
+
+    const storeProfit = storeGross - storeShipping;
+    const privProfit = privGross - privCost - privShipping;
 
     const pendingCod = orders
       .filter((o: any) => ["processing", "shipped"].includes(o.status))
@@ -166,6 +380,7 @@ function FinancePage() {
         Number(p.selling_price ?? 0),
         Number(p.selling_price ?? 0) - Number(p.cost_price ?? 0) - Number(p.shipping_cost ?? 0),
       );
+    for (const e of expenses) add(`${e.spent_at}T12:00:00`, 0, -Number(e.amount ?? 0));
     const series = Array.from(byMonth.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([, v]) => ({
@@ -183,7 +398,9 @@ function FinancePage() {
       gross,
       shippingCosts,
       productCosts: privCost,
+      operating,
       net,
+      realNet,
       pendingCod,
       collected,
       rejectRate,
@@ -192,8 +409,15 @@ function FinancePage() {
       series,
       split,
       orders,
+      expenses,
+      storeGross,
+      privGross,
+      storeProfit,
+      privProfit,
+      storeCount: confirmedOrders.length,
+      privCount: confirmedPrivate.length,
     };
-  }, [ordersQ.data, privQ.data, range]);
+  }, [ordersQ.data, privQ.data, expQ.data, range]);
 
   if (loading) {
     return (
@@ -203,29 +427,73 @@ function FinancePage() {
     );
   }
 
+  const sharePct = data.gross > 0 ? (data.storeGross / data.gross) * 100 : 0;
+
   return (
     <div className="space-y-5">
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-black sm:text-2xl">Financat</h1>
-          <p className="text-sm text-muted-foreground">
-            Pasqyra e plotë e të ardhurave nga dyqani dhe porositë private.
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-1 rounded-full bg-secondary p-1">
-          {(["30", "90", "all"] as const).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                range === r ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              {r === "all" ? "Gjithsej" : `${r} ditë`}
-            </button>
-          ))}
-        </div>
+      <header className="min-w-0">
+        <h1 className="truncate text-xl font-black sm:text-2xl">Financat</h1>
+        <p className="text-sm text-muted-foreground">
+          Pasqyra e plotë e të ardhurave, shpenzimeve dhe fitimit real.
+        </p>
       </header>
+
+      {/* Date range toolbar */}
+      <div className="rounded-2xl border bg-card p-3 shadow-sm">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Filtro sipas Datës
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap gap-1 rounded-full bg-secondary p-1">
+            {PRESETS.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setPreset(p.value)}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  preset === p.value
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <Label htmlFor="fin-from" className="text-xs">
+                Nga
+              </Label>
+              <Input
+                id="fin-from"
+                type="date"
+                className="h-9 w-[9.5rem]"
+                value={preset === "custom" ? customFrom : range.from}
+                onChange={(e) => {
+                  setCustomFrom(e.target.value);
+                  setCustomTo((t) => t || toKey(new Date()));
+                  setPreset("custom");
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="fin-to" className="text-xs">
+                Deri
+              </Label>
+              <Input
+                id="fin-to"
+                type="date"
+                className="h-9 w-[9.5rem]"
+                value={preset === "custom" ? customTo : range.to}
+                onChange={(e) => {
+                  setCustomTo(e.target.value);
+                  setPreset("custom");
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi label="Xhiroja Bruto" value={formatPrice(data.gross)} icon={Coins} tone="primary" />
@@ -242,10 +510,22 @@ function FinancePage() {
           tone="destructive"
           hint="Nga porositë private"
         />
-        <Kpi label="Fitimi Neto" value={formatPrice(data.net)} icon={TrendingUp} tone="success" />
+        <Kpi
+          label="Shpenzime Operative"
+          value={formatPrice(data.operating)}
+          icon={Receipt}
+          tone="destructive"
+        />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Kpi
+          label="Fitimi Neto Real"
+          value={formatPrice(data.realNet)}
+          icon={TrendingUp}
+          tone={data.realNet >= 0 ? "success" : "destructive"}
+          hint="Xhiro − kosto − postë − shpenzime"
+        />
         <Kpi
           label="Të arkëtuara (COD)"
           value={formatPrice(data.collected)}
@@ -258,14 +538,94 @@ function FinancePage() {
           icon={Truck}
           hint="Porosi në proces / të dërguara"
         />
-        <Kpi label="Vlera mesatare e porosisë" value={formatPrice(data.aov)} icon={Coins} />
         <Kpi
           label="Norma e kthimeve"
           value={`${data.rejectRate.toFixed(1)}%`}
           icon={TrendingUp}
           tone={data.rejectRate > 15 ? "destructive" : "default"}
-          hint={`${data.count} porosi të konfirmuara`}
+          hint={`${data.count} porosi të konfirmuara · VMP ${formatPrice(data.aov)}`}
         />
+      </div>
+
+      {/* Revenue source breakdown */}
+      <div className="rounded-2xl border bg-card p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-bold">Burimi i shitjeve: Dyqani vs Porosi Private</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            {
+              name: "Dyqani Online",
+              gross: data.storeGross,
+              profit: data.storeProfit,
+              count: data.storeCount,
+              cls: "bg-primary",
+            },
+            {
+              name: "Porosi Private",
+              gross: data.privGross,
+              profit: data.privProfit,
+              count: data.privCount,
+              cls: "bg-success",
+            },
+          ].map((s) => (
+            <div key={s.name} className="rounded-xl border p-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                <p className="min-w-0 truncate text-sm font-semibold">{s.name}</p>
+                <span className="shrink-0 text-xs text-muted-foreground">{s.count} porosi</span>
+              </div>
+              <p className="mt-1 text-xl font-black">{formatPrice(s.gross)}</p>
+              <p className="text-xs text-muted-foreground">
+                Fitim: <span className="font-semibold text-success">{formatPrice(s.profit)}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-secondary">
+          <div className="h-full bg-primary" style={{ width: `${sharePct}%` }} />
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {sharePct.toFixed(0)}% dyqani online · {(100 - sharePct).toFixed(0)}% porosi private
+        </p>
+      </div>
+
+      {/* Expenses list */}
+      <div className="rounded-2xl border bg-card p-4 shadow-sm">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <h2 className="min-w-0 truncate text-sm font-bold">Shpenzimet Operative</h2>
+          <AddExpenseDialog
+            onSaved={() => qc.invalidateQueries({ queryKey: ["admin", "expenses"] })}
+          />
+        </div>
+        {data.expenses.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Nuk ka shpenzime për këtë periudhë.
+          </p>
+        ) : (
+          <ul className="mt-3 divide-y">
+            {data.expenses.map((e: any) => (
+              <li key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {e.category}
+                    {e.description ? ` — ${e.description}` : ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{e.spent_at}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-bold text-destructive">{formatPrice(e.amount)}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                    onClick={() => delExpense.mutate(e.id)}
+                    aria-label="Fshij shpenzimin"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -335,7 +695,7 @@ function FinancePage() {
                 exportOrdersToExcel(data.orders as any, {
                   gross: data.gross,
                   shippingCosts: data.shippingCosts,
-                  net: data.net,
+                  net: data.realNet,
                   orders: data.count,
                 })
               }
@@ -351,7 +711,7 @@ function FinancePage() {
                   {
                     gross: data.gross,
                     shippingCosts: data.shippingCosts,
-                    net: data.net,
+                    net: data.realNet,
                     orders: data.count,
                     shippingPrice: 0,
                   },
