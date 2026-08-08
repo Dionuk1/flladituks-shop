@@ -189,6 +189,7 @@ const productSchema = z.object({
   stock: z.number().int().min(0).max(1_000_000).optional(),
   status: z.string().max(50).optional(),
   shipping_cost: z.number().min(0).max(10_000).optional(),
+  cost_price: z.number().min(0).max(1_000_000).optional(),
 });
 
 export const adminInsertProducts = createServerFn({ method: "POST" })
