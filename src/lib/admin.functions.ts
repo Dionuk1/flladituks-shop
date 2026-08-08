@@ -778,3 +778,62 @@ export const adminCityAnalytics = createServerFn({ method: "POST" })
 
     return Object.values(acc).sort((a, b) => b.total - a.total);
   });
+
+// =================== Operating expenses ===================
+
+export const adminListExpenses = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("expenses")
+      .select("*")
+      .order("spent_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const adminAddExpense = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      token: string;
+      category: string;
+      description?: string;
+      amount: number;
+      spent_at?: string;
+    }) =>
+      z
+        .object({
+          token: z.string(),
+          category: z.string().min(1).max(100),
+          description: z.string().max(500).optional(),
+          amount: z.number().min(0).max(1_000_000),
+          spent_at: z.string().min(4).max(20).optional(),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("expenses").insert({
+      category: data.category,
+      description: data.description ?? "",
+      amount: data.amount,
+      spent_at: data.spent_at ?? new Date().toISOString().slice(0, 10),
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteExpense = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string }) =>
+    z.object({ token: z.string(), id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("expenses").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
