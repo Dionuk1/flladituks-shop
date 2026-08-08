@@ -29,6 +29,7 @@ const empty = {
   title: "",
   description: "",
   price: "",
+  cost_price: "",
   category: "",
   condition: "I ri",
   stock: "1",
