@@ -146,6 +146,7 @@ function AddProductPage() {
               title: form.title.trim(),
               description: form.description.trim() || null,
               price: Number(form.price),
+              cost_price: Number(form.cost_price) || 0,
               category: form.category || null,
               condition: form.condition,
               stock: Number(form.stock) || 0,
