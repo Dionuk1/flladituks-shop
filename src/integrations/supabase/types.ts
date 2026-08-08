@@ -32,6 +32,33 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          id: string
+          spent_at: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          spent_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          spent_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           address: string
@@ -144,6 +171,7 @@ export type Database = {
         Row: {
           category: string | null
           condition: string | null
+          cost_price: number
           created_at: string
           description: string | null
           id: string
@@ -159,6 +187,7 @@ export type Database = {
         Insert: {
           category?: string | null
           condition?: string | null
+          cost_price?: number
           created_at?: string
           description?: string | null
           id?: string
@@ -174,6 +203,7 @@ export type Database = {
         Update: {
           category?: string | null
           condition?: string | null
+          cost_price?: number
           created_at?: string
           description?: string | null
           id?: string
