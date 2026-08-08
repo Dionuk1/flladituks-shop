@@ -71,9 +71,20 @@ export function ShippingLabelDialog({
           </div>
 
           <div className="mt-2 flex flex-col items-center border-b border-dashed pb-2">
-            <BarcodePlaceholder code={code} />
+            <QRCodeSVG
+              value={
+                typeof window !== "undefined"
+                  ? `${window.location.origin}/porosia/${order.id}`
+                  : order.id
+              }
+              size={92}
+              bgColor="transparent"
+              fgColor="#000000"
+              aria-label={`Kod QR për porosinë ${code}`}
+            />
             <p className="mt-1 font-mono text-[10px] tracking-[0.3em]">{code}</p>
           </div>
+
 
           <div className="mt-2 space-y-0.5 text-sm">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
