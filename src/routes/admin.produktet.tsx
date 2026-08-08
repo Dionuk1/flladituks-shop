@@ -270,6 +270,7 @@ function EditProductDialog({
     setTitle(product.title ?? "");
     setDescription(product.description ?? "");
     setPrice(String(product.price ?? ""));
+    setCostPrice(product.cost_price != null ? String(product.cost_price) : "");
     setCategory(product.category ?? "");
     setCondition(product.condition ?? "I ri");
     setStock(String(product.stock ?? 0));
