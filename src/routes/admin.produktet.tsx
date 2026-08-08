@@ -395,6 +395,7 @@ function EditProductDialog({
             title: title.trim(),
             description: description.trim() || null,
             price: Number(price),
+            cost_price: Number(costPrice) || 0,
             category: category || null,
             condition,
             stock: Math.max(0, Math.floor(Number(stock) || 0)),
