@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { MarginHint } from "@/components/admin/margin-hint";
 import { CATEGORIES, CONDITIONS, formatPrice } from "@/lib/cities";
 import { adminInsertProducts, adminUploadProductImage } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
