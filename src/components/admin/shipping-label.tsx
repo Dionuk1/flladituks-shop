@@ -1,4 +1,5 @@
 import { Printer } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,24 +21,6 @@ export type ShippingLabelData = {
   total: number;
 };
 
-/** Deterministic pseudo-barcode bars derived from the order code. */
-function BarcodePlaceholder({ code }: { code: string }) {
-  const bars = Array.from({ length: 48 }, (_, i) => {
-    const seed = code.charCodeAt(i % code.length) + i * 7;
-    return (seed % 3) + 1;
-  });
-  return (
-    <div className="flex h-10 items-end gap-[2px]" aria-label={`Barkod ${code}`}>
-      {bars.map((w, i) => (
-        <span
-          key={i}
-          className="h-full bg-foreground"
-          style={{ width: `${w}px` }}
-        />
-      ))}
-    </div>
-  );
-}
 
 export function ShippingLabelDialog({
   order,
