@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { MarginHint } from "@/components/admin/margin-hint";
 import { CATEGORIES, CONDITIONS, formatPrice } from "@/lib/cities";
 import { adminInsertProducts, adminUploadProductImage } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
@@ -29,6 +30,7 @@ const empty = {
   title: "",
   description: "",
   price: "",
+  cost_price: "",
   category: "",
   condition: "I ri",
   stock: "1",
@@ -145,6 +147,7 @@ function AddProductPage() {
               title: form.title.trim(),
               description: form.description.trim() || null,
               price: Number(form.price),
+              cost_price: Number(form.cost_price) || 0,
               category: form.category || null,
               condition: form.condition,
               stock: Number(form.stock) || 0,
@@ -210,9 +213,20 @@ function AddProductPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div>
-              <Label htmlFor="price">Çmimi (€) *</Label>
+              <Label htmlFor="cost_price">Çmimi i Blerjes (€)</Label>
+              <Input
+                id="cost_price"
+                type="number"
+                step="0.01"
+                min={0}
+                value={form.cost_price}
+                onChange={(e) => set("cost_price", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="price">Çmimi i Shitjes (€) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -234,6 +248,9 @@ function AddProductPage() {
               />
             </div>
           </div>
+
+          <MarginHint cost={form.cost_price} price={form.price} />
+
 
           <div className="grid grid-cols-2 gap-3">
             <div>

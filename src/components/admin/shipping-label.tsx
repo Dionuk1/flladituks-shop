@@ -1,4 +1,5 @@
 import { Printer } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,24 +21,6 @@ export type ShippingLabelData = {
   total: number;
 };
 
-/** Deterministic pseudo-barcode bars derived from the order code. */
-function BarcodePlaceholder({ code }: { code: string }) {
-  const bars = Array.from({ length: 48 }, (_, i) => {
-    const seed = code.charCodeAt(i % code.length) + i * 7;
-    return (seed % 3) + 1;
-  });
-  return (
-    <div className="flex h-10 items-end gap-[2px]" aria-label={`Barkod ${code}`}>
-      {bars.map((w, i) => (
-        <span
-          key={i}
-          className="h-full bg-foreground"
-          style={{ width: `${w}px` }}
-        />
-      ))}
-    </div>
-  );
-}
 
 export function ShippingLabelDialog({
   order,
@@ -88,9 +71,20 @@ export function ShippingLabelDialog({
           </div>
 
           <div className="mt-2 flex flex-col items-center border-b border-dashed pb-2">
-            <BarcodePlaceholder code={code} />
+            <QRCodeSVG
+              value={
+                typeof window !== "undefined"
+                  ? `${window.location.origin}/porosia/${order.id}`
+                  : order.id
+              }
+              size={92}
+              bgColor="transparent"
+              fgColor="#000000"
+              aria-label={`Kod QR për porosinë ${code}`}
+            />
             <p className="mt-1 font-mono text-[10px] tracking-[0.3em]">{code}</p>
           </div>
+
 
           <div className="mt-2 space-y-0.5 text-sm">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
