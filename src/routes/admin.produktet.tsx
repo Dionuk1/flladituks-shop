@@ -144,6 +144,11 @@ function ProductsPage() {
           {filtered.map((p) => {
             const sold = p.status === "sold";
             const hasDiscount = p.old_price && Number(p.old_price) > Number(p.price);
+            const lowStock = !sold && Number(p.stock) <= 3;
+            const margin =
+              p.cost_price && Number(p.cost_price) > 0 && Number(p.price) > 0
+                ? ((Number(p.price) - Number(p.cost_price)) / Number(p.price)) * 100
+                : null;
             return (
               <li
                 key={p.id}
@@ -168,6 +173,11 @@ function ProductsPage() {
                         Në stok
                       </Badge>
                     )}
+                    {lowStock && (
+                      <Badge className="rounded-full bg-warning text-warning-foreground">
+                        {Number(p.stock) === 0 ? "PA STOK" : `STOK I ULËT (${p.stock})`}
+                      </Badge>
+                    )}
                     {hasDiscount && (
                       <Badge className="rounded-full bg-destructive/90 text-destructive-foreground">
                         ZBRITJE
@@ -186,8 +196,10 @@ function ProductsPage() {
                     ) : null}{" "}
                     · Stoku: {p.stock}
                     {p.shipping_cost ? ` · Transport: ${formatPrice(p.shipping_cost)}` : ""}
+                    {margin !== null ? ` · Marzha: ${margin.toFixed(0)}%` : ""}
                   </p>
                 </div>
+
                 <Button
                   variant="outline"
                   size="sm"
