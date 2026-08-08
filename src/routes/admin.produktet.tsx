@@ -256,6 +256,7 @@ function EditProductDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [costPrice, setCostPrice] = useState("");
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("I ri");
   const [stock, setStock] = useState("0");
