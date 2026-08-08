@@ -445,9 +445,20 @@ function EditProductDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div>
-              <Label htmlFor="e-price">Çmimi (€) *</Label>
+              <Label htmlFor="e-cost">Çmimi i Blerjes (€)</Label>
+              <Input
+                id="e-cost"
+                type="number"
+                step="0.01"
+                min={0}
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="e-price">Çmimi i Shitjes (€) *</Label>
               <Input
                 id="e-price"
                 type="number"
@@ -474,6 +485,10 @@ function EditProductDialog({
               />
             </div>
           </div>
+
+          <MarginHint cost={costPrice} price={price} />
+
+
 
           <div className="grid grid-cols-2 gap-3">
             <div>
