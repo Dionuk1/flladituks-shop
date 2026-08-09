@@ -451,7 +451,18 @@ function FinancePage() {
       { name: "Porosi private", value: Number(privGross.toFixed(2)) },
     ].filter((s) => s.value > 0);
 
+    const byCatMap: Record<string, number> = {};
+    for (const e of expenses as any[]) {
+      const key = String(e.category || "Të tjera");
+      byCatMap[key] = (byCatMap[key] ?? 0) + Number(e.amount ?? 0);
+    }
+    const byCategory = Object.entries(byCatMap)
+      .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
+      .sort((a, b) => b.value - a.value);
+
     return {
+      byCategory,
+
       gross,
       shippingCosts,
       productCosts: privCost,
