@@ -400,21 +400,11 @@ function OrdersPage() {
                       className="mt-2 justify-end"
                       phone={o.phone}
                       status={o.status}
+                      whatsappHref={buildShippedWhatsAppLink(o)}
                       onStatusChange={(v: string) => handleStatusChange(o, v)}
-                      onPrint={() =>
-                        setSlipOrder({
-                          id: o.id,
-                          order_no: o.order_no,
-                          customer_name: o.customer_name,
-                          phone: o.phone,
-                          city: o.city,
-                          country: "Kosovë",
-                          address: o.address,
-                          items: o.items ?? [],
-                          total: o.total,
-                        })
-                      }
+                      onPrint={() => setSlipOrder(toLabel(o))}
                     />
+
                   </div>
 
                 </div>
