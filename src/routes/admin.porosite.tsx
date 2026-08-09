@@ -381,8 +381,6 @@ function OrdersPage() {
                         </Badge>
                       )}
                     </div>
-
-                    </div>
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Phone className="h-3.5 w-3.5" /> {o.phone}
@@ -392,8 +390,10 @@ function OrdersPage() {
                       </span>
                       <span>{new Date(o.created_at).toLocaleString("sq")}</span>
                     </div>
+                    </div>
                   </div>
                   <div className="shrink-0 text-right">
+
                     <p className="text-lg font-bold text-primary">{formatPrice(o.total)}</p>
                     <p className="text-xs text-muted-foreground">Pagesa në dorë</p>
                     <OrderQuickActions
