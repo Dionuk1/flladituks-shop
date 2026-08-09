@@ -166,6 +166,37 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [spentAt, setSpentAt] = useState(toKey(new Date()));
+  const [receiptUrl, setReceiptUrl] = useState<string>("");
+  const [receiptName, setReceiptName] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+        reader.onerror = () => reject(new Error("Leximi i skedarit dështoi"));
+        reader.readAsDataURL(file);
+      });
+      const res = await adminUploadExpenseReceipt({
+        data: {
+          token: requireToken(),
+          filename: file.name,
+          contentType: file.type,
+          dataBase64,
+        },
+      });
+      setReceiptUrl(res.url);
+      setReceiptName(file.name);
+      toast.success("Fatura u ngarkua");
+    } catch (e: any) {
+      toast.error("Ngarkimi dështoi", { description: e.message });
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const m = useMutation({
     mutationFn: async () => {
@@ -178,6 +209,7 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
           description: description.trim(),
           amount: value,
           spent_at: spentAt,
+          ...(receiptUrl ? { receipt_url: receiptUrl } : {}),
         },
       });
     },
@@ -185,6 +217,8 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
       toast.success("Shpenzimi u regjistrua");
       setDescription("");
       setAmount("");
+      setReceiptUrl("");
+      setReceiptName("");
       setOpen(false);
       onSaved();
     },
@@ -198,13 +232,13 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
           <Plus className="mr-1.5 h-4 w-4" /> Shto Shpenzim
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Shto Shpenzim Operativ</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>Kategoria</Label>
+            <Label>Kategoria *</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue />
@@ -249,11 +283,31 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
               />
             </div>
           </div>
+          <div>
+            <Label htmlFor="exp-receipt">📄 Ngarko Faturë (PDF/Imazh)</Label>
+            <Input
+              id="exp-receipt"
+              type="file"
+              accept="image/*,application/pdf"
+              disabled={uploading}
+              onChange={(e) => handleFile(e.target.files?.[0])}
+            />
+            {uploading && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" /> Duke ngarkuar...
+              </p>
+            )}
+            {receiptUrl && (
+              <p className="mt-1 truncate text-xs text-success">
+                ✓ {receiptName || "Fatura e bashkangjitur"}
+              </p>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button
             onClick={() => m.mutate()}
-            disabled={m.isPending}
+            disabled={m.isPending || uploading}
             className="w-full rounded-full"
           >
             {m.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -264,6 +318,7 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
     </Dialog>
   );
 }
+
 
 function FinancePage() {
   const qc = useQueryClient();
