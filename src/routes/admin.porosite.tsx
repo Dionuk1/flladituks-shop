@@ -152,11 +152,58 @@ function OrdersPage() {
     queryFn: () => adminFinancials({ data: { token: requireToken() } }),
   });
 
-  const { data: rejectedPhones = [] } = useQuery({
+  const { data: riskyPhones = {} } = useQuery({
     queryKey: ["rejected-phones"],
-    queryFn: () => adminRejectedPhones({ data: { token: requireToken() } }),
+    queryFn: () => adminRiskyPhones({ data: { token: requireToken() } }),
   });
-  const rejectedSet = useMemo(() => new Set(rejectedPhones.map((p) => p.replace(/\s+/g, ""))), [rejectedPhones]);
+  const riskCount = (phone: string) =>
+    (riskyPhones as Record<string, number>)[String(phone ?? "").replace(/\D/g, "")] ?? 0;
+
+  // ---- Bulk selection ----
+  const [selected, setSelected] = useState<string[]>([]);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const visibleIds = useMemo(() => filtered.map((o) => o.id), [filtered]);
+  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
+  const selectedOrders = useMemo(
+    () => orders.filter((o) => selectedSet.has(o.id)),
+    [orders, selectedSet],
+  );
+  const [bulkPrint, setBulkPrint] = useState(false);
+
+  function toggleOne(id: string) {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+  function toggleAll() {
+    setSelected(allSelected ? [] : visibleIds);
+  }
+
+  async function bulkStatus(status: string) {
+    try {
+      await adminBulkUpdateOrderStatus({
+        data: { token: requireToken(), ids: selected, status },
+      });
+      toast.success(`${selected.length} porosi u përditësuan në "${statusLabel(status)}"`);
+      setSelected([]);
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["admin-financials"] });
+      qc.invalidateQueries({ queryKey: ["rejected-phones"] });
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
+    }
+  }
+
+  const toLabel = (o: Order): ShippingLabelData => ({
+    id: o.id,
+    order_no: o.order_no,
+    customer_name: o.customer_name,
+    phone: o.phone,
+    city: o.city,
+    country: "Kosovë",
+    address: o.address,
+    items: o.items ?? [],
+    total: o.total,
+  });
+
 
   return (
     <div className="space-y-6">
