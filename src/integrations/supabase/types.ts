@@ -39,6 +39,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          receipt_url: string | null
           spent_at: string
         }
         Insert: {
@@ -47,6 +48,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          receipt_url?: string | null
           spent_at?: string
         }
         Update: {
@@ -55,6 +57,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          receipt_url?: string | null
           spent_at?: string
         }
         Relationships: []

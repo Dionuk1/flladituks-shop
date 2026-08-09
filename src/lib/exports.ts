@@ -166,3 +166,49 @@ export function buildWhatsAppLink(o: OrderLike) {
     `\nFaleminderit që blet te FlladituKS! 🛍️`;
   return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
 }
+
+/** Normalize a Kosovo phone number to international format for wa.me links. */
+export function normalizePhone(phone: string | null | undefined) {
+  const digits = String(phone ?? "").replace(/[^\d]/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("383")) return digits;
+  if (digits.startsWith("0")) return `383${digits.slice(1)}`;
+  return digits;
+}
+
+/** Quick "order shipped" WhatsApp message for the table quick actions. */
+export function buildShippedWhatsAppLink(o: {
+  phone: string;
+  customer_name: string;
+  order_no?: number | null;
+  id: string;
+}) {
+  const code =
+    o.order_no != null ? `#${o.order_no}` : `#${String(o.id).slice(0, 6).toUpperCase()}`;
+  const msg =
+    `Përshëndetje ${o.customer_name}, porosia juaj ${code} është nisur me postë ` +
+    `dhe pritet t'ju arrijë së shpejti! Faleminderit nga FlladituKS.`;
+  return `https://wa.me/${normalizePhone(o.phone)}?text=${encodeURIComponent(msg)}`;
+}
+
+/** Clean export formatted for local courier companies. */
+export function exportOrdersForCourier(orders: OrderLike[], scopeLabel = "Te-gjitha") {
+  const rows = orders.map((o: any) => ({
+    "ID e Porosisë": o.order_no != null ? `#${o.order_no}` : `#${String(o.id).slice(0, 6).toUpperCase()}`,
+    "Emri i Plotë": o.customer_name,
+    "Numri i Telefonit": o.phone,
+    "Qyteti": o.city,
+    "Adresa e Plotë": o.address,
+    "Produktet": (o.items ?? []).map((i: any) => `${i.quantity}× ${i.title}`).join(", "),
+    "Shuma për Arkëtim (COD €)": Number(o.total ?? 0),
+    "Statusi": statusLabel(o.status),
+  }));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{ wch: 12 }, { wch: 24 }, { wch: 16 }, { wch: 16 }, { wch: 40 }, { wch: 40 }, { wch: 18 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, ws, "Posta");
+  XLSX.writeFile(
+    wb,
+    `FlladituKS-Posta-${scopeLabel}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+  );
+}

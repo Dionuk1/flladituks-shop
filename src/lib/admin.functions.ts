@@ -802,6 +802,7 @@ export const adminAddExpense = createServerFn({ method: "POST" })
       description?: string;
       amount: number;
       spent_at?: string;
+      receipt_url?: string;
     }) =>
       z
         .object({
@@ -810,6 +811,7 @@ export const adminAddExpense = createServerFn({ method: "POST" })
           description: z.string().max(500).optional(),
           amount: z.number().min(0).max(1_000_000),
           spent_at: z.string().min(4).max(20).optional(),
+          receipt_url: z.string().url().max(2000).optional(),
         })
         .parse(d),
   )
@@ -821,10 +823,12 @@ export const adminAddExpense = createServerFn({ method: "POST" })
       description: data.description ?? "",
       amount: data.amount,
       spent_at: data.spent_at ?? new Date().toISOString().slice(0, 10),
+      receipt_url: data.receipt_url ?? null,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 export const adminDeleteExpense = createServerFn({ method: "POST" })
   .inputValidator((d: { token: string; id: string }) =>
@@ -836,4 +840,95 @@ export const adminDeleteExpense = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("expenses").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// =================== Bulk order status update ===================
+
+export const adminBulkUpdateOrderStatus = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; ids: string[]; status: string }) =>
+    z
+      .object({
+        token: z.string(),
+        ids: z.array(z.string().uuid()).min(1).max(500),
+        status: z.string().min(1).max(50),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("orders")
+      .select("id, items, status")
+      .in("id", data.ids);
+
+    const willRelease = RELEASED_STATUSES.has(data.status);
+    for (const row of (rows ?? []) as any[]) {
+      const items = (row.items ?? []) as Array<{ id: string; quantity: number }>;
+      const wasReleased = RELEASED_STATUSES.has(row.status ?? "");
+      if (willRelease && !wasReleased) await restockItems(items);
+      if (!willRelease && wasReleased) await decrementStockForOrder(items);
+    }
+
+    const { error } = await supabaseAdmin
+      .from("orders")
+      .update({ status: data.status })
+      .in("id", data.ids);
+    if (error) throw new Error(error.message);
+    return { updated: data.ids.length };
+  });
+
+// =================== Customer trust score (anti-return) ===================
+
+export const adminRiskyPhones = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("orders")
+      .select("phone, status")
+      .in("status", ["rejected", "cancelled"]);
+    const counts: Record<string, number> = {};
+    for (const r of (rows ?? []) as any[]) {
+      const key = String(r.phone ?? "").replace(/\D/g, "");
+      if (!key) continue;
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  });
+
+// =================== Expense receipt upload ===================
+
+export const adminUploadExpenseReceipt = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; filename: string; contentType: string; dataBase64: string }) =>
+    z
+      .object({
+        token: z.string(),
+        filename: z.string().min(1).max(255),
+        contentType: z
+          .string()
+          .regex(/^(image\/(png|jpe?g|webp|gif|avif)|application\/pdf)$/i, "Lloji i skedarit i palejuar"),
+        dataBase64: z.string().min(1).max(15_000_000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const buf = Buffer.from(data.dataBase64, "base64");
+    if (buf.length > 5 * 1024 * 1024) throw new Error("Skedari më i madh se 5MB");
+    const ext = data.filename.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `receipts/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabaseAdmin.storage
+      .from("flladituks-images")
+      .upload(path, buf, { contentType: data.contentType, upsert: false });
+    if (error) throw new Error(error.message);
+    const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+    const { data: signed } = await supabaseAdmin.storage
+      .from("flladituks-images")
+      .createSignedUrl(path, TEN_YEARS);
+    if (signed?.signedUrl) return { url: signed.signedUrl };
+    const { data: pub } = supabaseAdmin.storage.from("flladituks-images").getPublicUrl(path);
+    return { url: pub.publicUrl };
   });

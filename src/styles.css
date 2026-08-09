@@ -165,7 +165,7 @@
     visibility: visible !important;
   }
   body.printing-slip #shipping-slip {
-    position: fixed;
+    position: absolute;
     inset: 0 auto auto 0;
     width: 92mm;
     max-width: 92mm;
@@ -174,4 +174,16 @@
     color: #000;
     background: #fff;
   }
+  body.printing-slip #shipping-slip .slip-page {
+    width: 92mm;
+    max-width: 92mm;
+    break-after: page;
+    page-break-after: always;
+    border: none;
+  }
+  body.printing-slip #shipping-slip .slip-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
 }
+

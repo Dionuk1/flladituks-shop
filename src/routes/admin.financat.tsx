@@ -35,6 +35,8 @@ import {
   adminListExpenses,
   adminListOrders,
   adminListPrivateOrders,
+  adminUploadExpenseReceipt,
+
 } from "@/lib/admin.functions";
 import { formatPrice } from "@/lib/cities";
 import { Button } from "@/components/ui/button";
@@ -82,12 +84,23 @@ const CONFIRMED = ["processing", "shipped", "completed"];
 const MONTHS = ["Jan", "Shk", "Mar", "Pri", "Maj", "Qer", "Kor", "Gsh", "Sht", "Tet", "Nën", "Dhj"];
 
 const EXPENSE_CATEGORIES = [
-  "Reklama (Instagram/Meta)",
-  "Paketimi",
-  "Karburant / Logjistikë",
-  "Pajisje",
-  "Tjetër",
+  "Reklama & Marketing",
+  "Paketim & Kuti",
+  "Transport & Logjistikë",
+  "Inventar & Furnizim",
+  "Software & Licenca",
+  "Të tjera",
 ];
+
+const EXPENSE_COLORS = [
+  "var(--color-primary)",
+  "var(--color-success)",
+  "var(--color-warning)",
+  "var(--color-destructive)",
+  "oklch(0.65 0.15 300)",
+  "var(--color-muted-foreground)",
+];
+
 
 type Preset = "today" | "week" | "month" | "lastMonth" | "all" | "custom";
 
@@ -166,6 +179,37 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [spentAt, setSpentAt] = useState(toKey(new Date()));
+  const [receiptUrl, setReceiptUrl] = useState<string>("");
+  const [receiptName, setReceiptName] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+        reader.onerror = () => reject(new Error("Leximi i skedarit dështoi"));
+        reader.readAsDataURL(file);
+      });
+      const res = await adminUploadExpenseReceipt({
+        data: {
+          token: requireToken(),
+          filename: file.name,
+          contentType: file.type,
+          dataBase64,
+        },
+      });
+      setReceiptUrl(res.url);
+      setReceiptName(file.name);
+      toast.success("Fatura u ngarkua");
+    } catch (e: any) {
+      toast.error("Ngarkimi dështoi", { description: e.message });
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const m = useMutation({
     mutationFn: async () => {
@@ -178,6 +222,7 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
           description: description.trim(),
           amount: value,
           spent_at: spentAt,
+          ...(receiptUrl ? { receipt_url: receiptUrl } : {}),
         },
       });
     },
@@ -185,6 +230,8 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
       toast.success("Shpenzimi u regjistrua");
       setDescription("");
       setAmount("");
+      setReceiptUrl("");
+      setReceiptName("");
       setOpen(false);
       onSaved();
     },
@@ -198,13 +245,13 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
           <Plus className="mr-1.5 h-4 w-4" /> Shto Shpenzim
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Shto Shpenzim Operativ</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>Kategoria</Label>
+            <Label>Kategoria *</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue />
@@ -249,11 +296,31 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
               />
             </div>
           </div>
+          <div>
+            <Label htmlFor="exp-receipt">📄 Ngarko Faturë (PDF/Imazh)</Label>
+            <Input
+              id="exp-receipt"
+              type="file"
+              accept="image/*,application/pdf"
+              disabled={uploading}
+              onChange={(e) => handleFile(e.target.files?.[0])}
+            />
+            {uploading && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" /> Duke ngarkuar...
+              </p>
+            )}
+            {receiptUrl && (
+              <p className="mt-1 truncate text-xs text-success">
+                ✓ {receiptName || "Fatura e bashkangjitur"}
+              </p>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button
             onClick={() => m.mutate()}
-            disabled={m.isPending}
+            disabled={m.isPending || uploading}
             className="w-full rounded-full"
           >
             {m.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -264,6 +331,7 @@ function AddExpenseDialog({ onSaved }: { onSaved: () => void }) {
     </Dialog>
   );
 }
+
 
 function FinancePage() {
   const qc = useQueryClient();
@@ -394,7 +462,18 @@ function FinancePage() {
       { name: "Porosi private", value: Number(privGross.toFixed(2)) },
     ].filter((s) => s.value > 0);
 
+    const byCatMap: Record<string, number> = {};
+    for (const e of expenses as any[]) {
+      const key = String(e.category || "Të tjera");
+      byCatMap[key] = (byCatMap[key] ?? 0) + Number(e.amount ?? 0);
+    }
+    const byCategory = Object.entries(byCatMap)
+      .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
+      .sort((a, b) => b.value - a.value);
+
     return {
+      byCategory,
+
       gross,
       shippingCosts,
       productCosts: privCost,
@@ -612,6 +691,20 @@ function FinancePage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="font-bold text-destructive">{formatPrice(e.amount)}</span>
+                  {e.receipt_url && (
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 rounded-full"
+                      asChild
+                      title="Shiko faturën"
+                      aria-label="Shiko faturën"
+                    >
+                      <a href={e.receipt_url} target="_blank" rel="noreferrer">
+                        <FileText className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     variant="ghost"
@@ -626,7 +719,55 @@ function FinancePage() {
             ))}
           </ul>
         )}
+
+        {data.byCategory.length > 0 && (
+          <div className="mt-4 grid gap-4 border-t pt-4 md:grid-cols-2">
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.byCategory}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={45}
+                    outerRadius={78}
+                  >
+                    {data.byCategory.map((_, i) => (
+                      <Cell key={i} fill={EXPENSE_COLORS[i % EXPENSE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: any) => formatPrice(Number(v))} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <ul className="space-y-2 self-center">
+              {data.byCategory.map((c, i) => {
+                const pct = data.operating > 0 ? (c.value / data.operating) * 100 : 0;
+                return (
+                  <li key={c.name}>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-xs">
+                      <span className="truncate font-medium">{c.name}</span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {formatPrice(c.value)} · {pct.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${pct}%`,
+                          background: EXPENSE_COLORS[i % EXPENSE_COLORS.length],
+                        }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
+
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border bg-card p-4 shadow-sm lg:col-span-2">

@@ -4,17 +4,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings,
   FileSpreadsheet, FileText, MessageCircle, AlertTriangle, Send, Download, FileDown, Printer,
+  Layers, X,
 } from "lucide-react";
 import { OrderQuickActions } from "@/components/admin/order-quick-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import {
@@ -22,7 +24,8 @@ import {
 } from "@/components/ui/select";
 import {
   adminListOrders, adminUpdateOrderStatus, adminDeleteOrder, adminFinancials,
-  adminSetShippingPrice, adminRejectedPhones, adminSetTrackingNumber,
+  adminSetShippingPrice, adminRiskyPhones, adminSetTrackingNumber,
+  adminBulkUpdateOrderStatus,
   getNotificationEmail, adminSetNotificationEmail,
   getEmailJsConfig, adminSetEmailJsConfig,
 } from "@/lib/admin.functions";
@@ -31,9 +34,15 @@ import {
   ORDER_STATUSES, STATUS_QUICK_FILTERS, formatOrderNo, formatPrice, statusLabel,
   statusBadgeClass, type OrderStatus,
 } from "@/lib/cities";
-import { ShippingLabelDialog, type ShippingLabelData } from "@/components/admin/shipping-label";
-import { exportOrdersToExcel, exportFinancialsToPDF, exportInvoiceToPDF, buildWhatsAppLink } from "@/lib/exports";
+import {
+  ShippingLabelDialog, BulkShippingLabelsDialog, type ShippingLabelData,
+} from "@/components/admin/shipping-label";
+import {
+  exportOrdersToExcel, exportFinancialsToPDF, exportInvoiceToPDF, buildWhatsAppLink,
+  exportOrdersForCourier, buildShippedWhatsAppLink,
+} from "@/lib/exports";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/admin/porosite")({
   component: OrdersPage,
@@ -143,11 +152,58 @@ function OrdersPage() {
     queryFn: () => adminFinancials({ data: { token: requireToken() } }),
   });
 
-  const { data: rejectedPhones = [] } = useQuery({
+  const { data: riskyPhones = {} } = useQuery({
     queryKey: ["rejected-phones"],
-    queryFn: () => adminRejectedPhones({ data: { token: requireToken() } }),
+    queryFn: () => adminRiskyPhones({ data: { token: requireToken() } }),
   });
-  const rejectedSet = useMemo(() => new Set(rejectedPhones.map((p) => p.replace(/\s+/g, ""))), [rejectedPhones]);
+  const riskCount = (phone: string) =>
+    (riskyPhones as Record<string, number>)[String(phone ?? "").replace(/\D/g, "")] ?? 0;
+
+  // ---- Bulk selection ----
+  const [selected, setSelected] = useState<string[]>([]);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const visibleIds = useMemo(() => filtered.map((o) => o.id), [filtered]);
+  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
+  const selectedOrders = useMemo(
+    () => orders.filter((o) => selectedSet.has(o.id)),
+    [orders, selectedSet],
+  );
+  const [bulkPrint, setBulkPrint] = useState(false);
+
+  function toggleOne(id: string) {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+  function toggleAll() {
+    setSelected(allSelected ? [] : visibleIds);
+  }
+
+  async function bulkStatus(status: string) {
+    try {
+      await adminBulkUpdateOrderStatus({
+        data: { token: requireToken(), ids: selected, status },
+      });
+      toast.success(`${selected.length} porosi u përditësuan në "${statusLabel(status)}"`);
+      setSelected([]);
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["admin-financials"] });
+      qc.invalidateQueries({ queryKey: ["rejected-phones"] });
+    } catch (e: any) {
+      toast.error("Gabim", { description: e.message });
+    }
+  }
+
+  const toLabel = (o: Order): ShippingLabelData => ({
+    id: o.id,
+    order_no: o.order_no,
+    customer_name: o.customer_name,
+    phone: o.phone,
+    city: o.city,
+    country: "Kosovë",
+    address: o.address,
+    items: o.items ?? [],
+    total: o.total,
+  });
+
 
   return (
     <div className="space-y-6">
@@ -206,7 +262,7 @@ function OrdersPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {STATUS_QUICK_FILTERS.map((f) => (
           <FilterChip
             key={f.key}
@@ -217,7 +273,71 @@ function OrdersPage() {
             {f.label}
           </FilterChip>
         ))}
+        <Button
+          size="sm"
+          variant="outline"
+          className="ml-auto rounded-full"
+          onClick={() =>
+            exportOrdersForCourier(
+              filtered as any,
+              STATUS_QUICK_FILTERS.find((f) => f.key === filter)?.label ?? "Te-gjitha",
+            )
+          }
+        >
+          <FileSpreadsheet className="mr-1 h-4 w-4" /> Eksporto për Postën
+        </Button>
       </div>
+
+      {/* Select all + bulk actions toolbar */}
+      {filtered.length > 0 && (
+        <div className="sticky top-2 z-30 flex flex-wrap items-center gap-3 rounded-2xl border bg-card/95 p-3 shadow-sm backdrop-blur">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={toggleAll}
+              aria-label="Zgjidh të gjitha porositë"
+            />
+            Zgjidh të gjitha ({filtered.length})
+          </label>
+
+          {selected.length > 0 && (
+            <>
+              <Badge className="rounded-full">{selected.length} të zgjedhura</Badge>
+              <Button
+                size="sm"
+                className="rounded-full"
+                onClick={() => setBulkPrint(true)}
+              >
+                <Printer className="mr-1 h-4 w-4" /> Printo Etiketat ({selected.length})
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-full">
+                    <Layers className="mr-1 h-4 w-4" /> Ndrysho Statusin Masiv
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Vendos statusin për të gjitha</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {ORDER_STATUSES.map((s) => (
+                    <DropdownMenuItem key={s.value} onClick={() => bulkStatus(s.value)}>
+                      {s.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full"
+                onClick={() => setSelected([])}
+              >
+                <X className="mr-1 h-4 w-4" /> Hiq zgjedhjen
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="h-40 animate-pulse rounded-2xl bg-secondary" />
@@ -228,11 +348,22 @@ function OrdersPage() {
       ) : (
         <ul className="space-y-3">
           {filtered.map((o) => {
-            const isRisky = rejectedSet.has(String(o.phone).replace(/\s+/g, "")) && o.status !== "rejected";
+            const risk = riskCount(o.phone);
+            const isRisky = risk > 0 && !["rejected", "cancelled"].includes(o.status as string);
             return (
-              <li key={o.id} className="rounded-2xl border bg-card p-4 shadow-sm">
+              <li
+                key={o.id}
+                className={`rounded-2xl border bg-card p-4 shadow-sm ${selectedSet.has(o.id) ? "ring-2 ring-primary" : ""}`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 gap-3">
+                    <Checkbox
+                      className="mt-1"
+                      checked={selectedSet.has(o.id)}
+                      onCheckedChange={() => toggleOne(o.id)}
+                      aria-label={`Zgjidh porosinë ${formatOrderNo(o.order_no, o.id)}`}
+                    />
+                    <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-bold text-muted-foreground">
                         {formatOrderNo(o.order_no, o.id)}
@@ -246,7 +377,7 @@ function OrdersPage() {
                       </Badge>
                       {isRisky && (
                         <Badge className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive text-xs">
-                          <AlertTriangle className="mr-1 h-3 w-3" /> Klient me rrezik (Ka porosi të refuzuar)
+                          <AlertTriangle className="mr-1 h-3 w-3" /> Rrezik Kthimi ({risk} porosi të kthyera)
                         </Badge>
                       )}
                     </div>
@@ -259,29 +390,21 @@ function OrdersPage() {
                       </span>
                       <span>{new Date(o.created_at).toLocaleString("sq")}</span>
                     </div>
+                    </div>
                   </div>
                   <div className="shrink-0 text-right">
+
                     <p className="text-lg font-bold text-primary">{formatPrice(o.total)}</p>
                     <p className="text-xs text-muted-foreground">Pagesa në dorë</p>
                     <OrderQuickActions
                       className="mt-2 justify-end"
                       phone={o.phone}
                       status={o.status}
+                      whatsappHref={buildShippedWhatsAppLink(o)}
                       onStatusChange={(v: string) => handleStatusChange(o, v)}
-                      onPrint={() =>
-                        setSlipOrder({
-                          id: o.id,
-                          order_no: o.order_no,
-                          customer_name: o.customer_name,
-                          phone: o.phone,
-                          city: o.city,
-                          country: "Kosovë",
-                          address: o.address,
-                          items: o.items ?? [],
-                          total: o.total,
-                        })
-                      }
+                      onPrint={() => setSlipOrder(toLabel(o))}
                     />
+
                   </div>
 
                 </div>
@@ -373,6 +496,13 @@ function OrdersPage() {
         open={!!slipOrder}
         onOpenChange={(v) => !v && setSlipOrder(null)}
       />
+
+      <BulkShippingLabelsDialog
+        orders={selectedOrders.map(toLabel)}
+        open={bulkPrint && selectedOrders.length > 0}
+        onOpenChange={(v) => setBulkPrint(v)}
+      />
+
 
       <Dialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>
         <DialogContent>
