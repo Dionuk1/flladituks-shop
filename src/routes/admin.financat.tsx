@@ -84,12 +84,23 @@ const CONFIRMED = ["processing", "shipped", "completed"];
 const MONTHS = ["Jan", "Shk", "Mar", "Pri", "Maj", "Qer", "Kor", "Gsh", "Sht", "Tet", "Nën", "Dhj"];
 
 const EXPENSE_CATEGORIES = [
-  "Reklama (Instagram/Meta)",
-  "Paketimi",
-  "Karburant / Logjistikë",
-  "Pajisje",
-  "Tjetër",
+  "Reklama & Marketing",
+  "Paketim & Kuti",
+  "Transport & Logjistikë",
+  "Inventar & Furnizim",
+  "Software & Licenca",
+  "Të tjera",
 ];
+
+const EXPENSE_COLORS = [
+  "var(--color-primary)",
+  "var(--color-success)",
+  "var(--color-warning)",
+  "var(--color-destructive)",
+  "oklch(0.65 0.15 300)",
+  "var(--color-muted-foreground)",
+];
+
 
 type Preset = "today" | "week" | "month" | "lastMonth" | "all" | "custom";
 
