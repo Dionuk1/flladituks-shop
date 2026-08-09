@@ -4,17 +4,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Copy, Trash2, Phone, MapPin, Package2, TrendingUp, Truck, Wallet, Settings,
   FileSpreadsheet, FileText, MessageCircle, AlertTriangle, Send, Download, FileDown, Printer,
+  Layers, X,
 } from "lucide-react";
 import { OrderQuickActions } from "@/components/admin/order-quick-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import {
@@ -22,7 +24,8 @@ import {
 } from "@/components/ui/select";
 import {
   adminListOrders, adminUpdateOrderStatus, adminDeleteOrder, adminFinancials,
-  adminSetShippingPrice, adminRejectedPhones, adminSetTrackingNumber,
+  adminSetShippingPrice, adminRiskyPhones, adminSetTrackingNumber,
+  adminBulkUpdateOrderStatus,
   getNotificationEmail, adminSetNotificationEmail,
   getEmailJsConfig, adminSetEmailJsConfig,
 } from "@/lib/admin.functions";
@@ -31,9 +34,15 @@ import {
   ORDER_STATUSES, STATUS_QUICK_FILTERS, formatOrderNo, formatPrice, statusLabel,
   statusBadgeClass, type OrderStatus,
 } from "@/lib/cities";
-import { ShippingLabelDialog, type ShippingLabelData } from "@/components/admin/shipping-label";
-import { exportOrdersToExcel, exportFinancialsToPDF, exportInvoiceToPDF, buildWhatsAppLink } from "@/lib/exports";
+import {
+  ShippingLabelDialog, BulkShippingLabelsDialog, type ShippingLabelData,
+} from "@/components/admin/shipping-label";
+import {
+  exportOrdersToExcel, exportFinancialsToPDF, exportInvoiceToPDF, buildWhatsAppLink,
+  exportOrdersForCourier, buildShippedWhatsAppLink,
+} from "@/lib/exports";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/admin/porosite")({
   component: OrdersPage,
