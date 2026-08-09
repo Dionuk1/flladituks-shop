@@ -680,6 +680,20 @@ function FinancePage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="font-bold text-destructive">{formatPrice(e.amount)}</span>
+                  {e.receipt_url && (
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 rounded-full"
+                      asChild
+                      title="Shiko faturën"
+                      aria-label="Shiko faturën"
+                    >
+                      <a href={e.receipt_url} target="_blank" rel="noreferrer">
+                        <FileText className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     variant="ghost"
@@ -694,7 +708,55 @@ function FinancePage() {
             ))}
           </ul>
         )}
+
+        {data.byCategory.length > 0 && (
+          <div className="mt-4 grid gap-4 border-t pt-4 md:grid-cols-2">
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.byCategory}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={45}
+                    outerRadius={78}
+                  >
+                    {data.byCategory.map((_, i) => (
+                      <Cell key={i} fill={EXPENSE_COLORS[i % EXPENSE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: any) => formatPrice(Number(v))} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <ul className="space-y-2 self-center">
+              {data.byCategory.map((c, i) => {
+                const pct = data.operating > 0 ? (c.value / data.operating) * 100 : 0;
+                return (
+                  <li key={c.name}>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-xs">
+                      <span className="truncate font-medium">{c.name}</span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {formatPrice(c.value)} · {pct.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${pct}%`,
+                          background: EXPENSE_COLORS[i % EXPENSE_COLORS.length],
+                        }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
+
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border bg-card p-4 shadow-sm lg:col-span-2">
