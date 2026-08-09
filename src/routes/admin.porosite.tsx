@@ -262,7 +262,7 @@ function OrdersPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {STATUS_QUICK_FILTERS.map((f) => (
           <FilterChip
             key={f.key}
@@ -273,7 +273,71 @@ function OrdersPage() {
             {f.label}
           </FilterChip>
         ))}
+        <Button
+          size="sm"
+          variant="outline"
+          className="ml-auto rounded-full"
+          onClick={() =>
+            exportOrdersForCourier(
+              filtered as any,
+              STATUS_QUICK_FILTERS.find((f) => f.key === filter)?.label ?? "Te-gjitha",
+            )
+          }
+        >
+          <FileSpreadsheet className="mr-1 h-4 w-4" /> Eksporto për Postën
+        </Button>
       </div>
+
+      {/* Select all + bulk actions toolbar */}
+      {filtered.length > 0 && (
+        <div className="sticky top-2 z-30 flex flex-wrap items-center gap-3 rounded-2xl border bg-card/95 p-3 shadow-sm backdrop-blur">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={toggleAll}
+              aria-label="Zgjidh të gjitha porositë"
+            />
+            Zgjidh të gjitha ({filtered.length})
+          </label>
+
+          {selected.length > 0 && (
+            <>
+              <Badge className="rounded-full">{selected.length} të zgjedhura</Badge>
+              <Button
+                size="sm"
+                className="rounded-full"
+                onClick={() => setBulkPrint(true)}
+              >
+                <Printer className="mr-1 h-4 w-4" /> Printo Etiketat ({selected.length})
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-full">
+                    <Layers className="mr-1 h-4 w-4" /> Ndrysho Statusin Masiv
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Vendos statusin për të gjitha</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {ORDER_STATUSES.map((s) => (
+                    <DropdownMenuItem key={s.value} onClick={() => bulkStatus(s.value)}>
+                      {s.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full"
+                onClick={() => setSelected([])}
+              >
+                <X className="mr-1 h-4 w-4" /> Hiq zgjedhjen
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="h-40 animate-pulse rounded-2xl bg-secondary" />
@@ -284,11 +348,22 @@ function OrdersPage() {
       ) : (
         <ul className="space-y-3">
           {filtered.map((o) => {
-            const isRisky = rejectedSet.has(String(o.phone).replace(/\s+/g, "")) && o.status !== "rejected";
+            const risk = riskCount(o.phone);
+            const isRisky = risk > 0 && !["rejected", "cancelled"].includes(o.status as string);
             return (
-              <li key={o.id} className="rounded-2xl border bg-card p-4 shadow-sm">
+              <li
+                key={o.id}
+                className={`rounded-2xl border bg-card p-4 shadow-sm ${selectedSet.has(o.id) ? "ring-2 ring-primary" : ""}`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 gap-3">
+                    <Checkbox
+                      className="mt-1"
+                      checked={selectedSet.has(o.id)}
+                      onCheckedChange={() => toggleOne(o.id)}
+                      aria-label={`Zgjidh porosinë ${formatOrderNo(o.order_no, o.id)}`}
+                    />
+                    <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-bold text-muted-foreground">
                         {formatOrderNo(o.order_no, o.id)}
@@ -302,9 +377,11 @@ function OrdersPage() {
                       </Badge>
                       {isRisky && (
                         <Badge className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive text-xs">
-                          <AlertTriangle className="mr-1 h-3 w-3" /> Klient me rrezik (Ka porosi të refuzuar)
+                          <AlertTriangle className="mr-1 h-3 w-3" /> Rrezik Kthimi ({risk} porosi të kthyera)
                         </Badge>
                       )}
+                    </div>
+
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
