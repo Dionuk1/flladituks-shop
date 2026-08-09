@@ -497,6 +497,13 @@ function OrdersPage() {
         onOpenChange={(v) => !v && setSlipOrder(null)}
       />
 
+      <BulkShippingLabelsDialog
+        orders={selectedOrders.map(toLabel)}
+        open={bulkPrint && selectedOrders.length > 0}
+        onOpenChange={(v) => setBulkPrint(v)}
+      />
+
+
       <Dialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>
         <DialogContent>
           <DialogHeader>
