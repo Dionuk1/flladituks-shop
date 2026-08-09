@@ -1,4 +1,4 @@
-import { Phone, Printer, ArrowLeftRight } from "lucide-react";
+import { Phone, Printer, ArrowLeftRight, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,19 +11,21 @@ import {
 import { ORDER_STATUSES, statusLabel } from "@/lib/cities";
 
 /**
- * Courier-style quick actions: call, print shipping label, switch status.
+ * Courier-style quick actions: call, WhatsApp, print shipping label, switch status.
  */
 export function OrderQuickActions({
   phone,
   status,
   onPrint,
   onStatusChange,
+  whatsappHref,
   className = "",
 }: {
   phone?: string | null;
   status: string;
   onPrint: () => void;
   onStatusChange: (status: string) => void;
+  whatsappHref?: string;
   className?: string;
 }) {
   const tel = String(phone ?? "").replace(/[^\d+]/g, "");
@@ -44,6 +46,24 @@ export function OrderQuickActions({
           </a>
         ) : (
           <Phone className="h-4 w-4" />
+        )}
+      </Button>
+
+      <Button
+        size="icon"
+        variant="outline"
+        className="h-8 w-8 rounded-full border-green-600 text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+        title="Dërgo mesazh në WhatsApp"
+        aria-label="Dërgo mesazh në WhatsApp"
+        disabled={!whatsappHref}
+        asChild={!!whatsappHref}
+      >
+        {whatsappHref ? (
+          <a href={whatsappHref} target="_blank" rel="noreferrer">
+            <MessageCircle className="h-4 w-4" />
+          </a>
+        ) : (
+          <MessageCircle className="h-4 w-4" />
         )}
       </Button>
 
