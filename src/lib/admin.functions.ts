@@ -802,6 +802,7 @@ export const adminAddExpense = createServerFn({ method: "POST" })
       description?: string;
       amount: number;
       spent_at?: string;
+      receipt_url?: string;
     }) =>
       z
         .object({
@@ -810,6 +811,7 @@ export const adminAddExpense = createServerFn({ method: "POST" })
           description: z.string().max(500).optional(),
           amount: z.number().min(0).max(1_000_000),
           spent_at: z.string().min(4).max(20).optional(),
+          receipt_url: z.string().url().max(2000).optional(),
         })
         .parse(d),
   )
@@ -821,10 +823,12 @@ export const adminAddExpense = createServerFn({ method: "POST" })
       description: data.description ?? "",
       amount: data.amount,
       spent_at: data.spent_at ?? new Date().toISOString().slice(0, 10),
+      receipt_url: data.receipt_url ?? null,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 export const adminDeleteExpense = createServerFn({ method: "POST" })
   .inputValidator((d: { token: string; id: string }) =>
