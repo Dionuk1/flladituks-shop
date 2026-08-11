@@ -12,6 +12,8 @@ import { formatPrice } from "@/lib/cities";
 import { createOrder, getShippingPrice } from "@/lib/admin.functions";
 import { sendOrderNotification } from "@/lib/email-notify";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
+import { OrderSuccessOverlay } from "./order-success";
 import { z } from "zod";
 
 const schema = z.object({
@@ -42,6 +44,8 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
   });
   const paymentMethod = "cash_on_delivery" as const;
   const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const { t } = useI18n();
   const [shippingPrice, setShippingPrice] = useState(2.0);
 
   useEffect(() => {
@@ -118,6 +122,8 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           description: mailErr?.message,
         });
       }
+      setSuccess(true);
+      await new Promise((r) => setTimeout(r, 1900));
       onDone();
       navigate({ to: "/porosia/$id", params: { id: res.id } });
     } catch (err: any) {
@@ -128,6 +134,8 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
   }
 
   return (
+    <>
+    {success && <OrderSuccessOverlay />}
     <form onSubmit={submit} className="flex flex-1 flex-col overflow-y-auto">
       <div className="flex-1 space-y-4 p-5">
         <button
@@ -135,11 +143,11 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           onClick={onBack}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Kthehu te shporta
+          <ArrowLeft className="h-4 w-4" /> {t("checkout.back")}
         </button>
 
         <div>
-          <Label htmlFor="name">Emri dhe Mbiemri *</Label>
+          <Label htmlFor="name">{t("checkout.name")}</Label>
           <Input
             id="name"
             value={form.customer_name}
@@ -150,7 +158,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         </div>
 
         <div>
-          <Label htmlFor="phone">Numri i Telefonit *</Label>
+          <Label htmlFor="phone">{t("checkout.phone")}</Label>
           <Input
             id="phone"
             type="tel"
@@ -162,12 +170,12 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         </div>
 
         <div>
-          <Label>Qyteti *</Label>
+          <Label>{t("checkout.city")}</Label>
           <CitySelect value={form.city} onChange={(v) => set("city", v)} />
         </div>
 
         <div>
-          <Label htmlFor="address">Adresa e Dorëzimit *</Label>
+          <Label htmlFor="address">{t("checkout.address")}</Label>
           <Textarea
             id="address"
             value={form.address}
@@ -179,7 +187,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         </div>
 
         <div>
-          <Label htmlFor="notes">Shënime (opsionale)</Label>
+          <Label htmlFor="notes">{t("checkout.notes")}</Label>
           <Textarea
             id="notes"
             value={form.notes}
@@ -190,13 +198,13 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         </div>
 
         <div className="space-y-2">
-          <Label>Mënyra e pagesës</Label>
+          <Label>{t("checkout.payment")}</Label>
           <div className="flex items-center gap-3 rounded-xl border border-primary bg-primary/5 p-3 text-sm ring-1 ring-primary">
             <span className="text-lg">💵</span>
             <span className="flex-1">
-              <span className="block font-medium">Pagesë në Dorëzim</span>
+              <span className="block font-medium">{t("checkout.cod")}</span>
               <span className="block text-xs text-muted-foreground">
-                Paguaj kur ta pranosh porosinë
+                {t("checkout.codSub")}
               </span>
             </span>
           </div>
@@ -207,13 +215,13 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
 
       <footer className="space-y-2 border-t bg-card p-5">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Nëntotali</span>
+          <span className="text-muted-foreground">{t("checkout.subtotal")}</span>
           <span>{formatPrice(itemsTotal)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Transporti</span>
+          <span className="text-muted-foreground">{t("checkout.shipping")}</span>
           <span className={shippingCost === 0 ? "font-semibold text-success" : ""}>
-            {shippingCost === 0 ? "Falas" : formatPrice(shippingCost)}
+            {shippingCost === 0 ? t("checkout.free") : formatPrice(shippingCost)}
           </span>
         </div>
         {itemsTotal <= FREE_SHIPPING_THRESHOLD && (
@@ -222,14 +230,15 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           </p>
         )}
         <div className="flex items-center justify-between border-t pt-2">
-          <span className="text-muted-foreground">Totali për pagesë</span>
+          <span className="text-muted-foreground">{t("checkout.totalPay")}</span>
           <span className="text-xl font-bold text-primary">{formatPrice(total)}</span>
         </div>
-        <Button type="submit" disabled={submitting} className="w-full rounded-full" size="lg">
+        <Button type="submit" disabled={submitting} className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95" size="lg">
           {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Konfirmo porosinë
+          {t("checkout.confirm")}
         </Button>
       </footer>
     </form>
+    </>
   );
 }

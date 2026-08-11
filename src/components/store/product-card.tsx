@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatPrice } from "@/lib/cities";
 import { useCart } from "@/lib/cart";
+import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 
 export type Product = {
@@ -42,7 +43,9 @@ export function discountPercent(price: number, oldPrice?: number | null): number
 
 export function ProductCard({ product }: { product: Product }) {
   const { add, setOpen, items } = useCart();
+  const { t } = useI18n();
   const [detailOpen, setDetailOpen] = useState(false);
+  const [ripple, setRipple] = useState<{ x: number; y: number } | null>(null);
   const sold = product.status === "sold";
   const available = !sold && product.stock > 0 && product.status === "available";
   const gallery = getGallery(product);
@@ -51,6 +54,11 @@ export function ProductCard({ product }: { product: Product }) {
 
   function handleAdd(e?: React.MouseEvent) {
     e?.stopPropagation();
+    if (e) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setRipple({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      setTimeout(() => setRipple(null), 600);
+    }
     const stockNum = Number(product.stock ?? 0);
     const inCart = items.find((i) => i.id === product.id)?.quantity ?? 0;
     if (!available || stockNum <= 0 || inCart >= stockNum) {
@@ -71,10 +79,11 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <>
       <div
-        className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition hover:shadow-lg"
+        className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_18px_40px_-16px_color-mix(in_oklab,var(--primary)_65%,transparent)]"
         onClick={() => setDetailOpen(true)}
       >
         <div className="relative aspect-square overflow-hidden bg-secondary">
+
           {cover ? (
             <img
               src={cover}
@@ -142,18 +151,29 @@ export function ProductCard({ product }: { product: Product }) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                {sold ? "E shitur" : available ? `${product.stock} në stok` : "I padisponueshëm"}
+                {sold
+                  ? t("product.sold")
+                  : available
+                    ? `${product.stock} ${t("product.inStock")}`
+                    : t("product.unavailable")}
               </p>
             </div>
             <Button
               size="sm"
               disabled={!available}
               onClick={handleAdd}
-              className="rounded-full"
+              className="relative overflow-hidden rounded-full transition-transform duration-200 hover:scale-105 active:scale-95"
             >
+              {ripple && (
+                <span
+                  className="ripple-dot pointer-events-none absolute h-8 w-8 rounded-full bg-primary-foreground/40"
+                  style={{ left: ripple.x - 16, top: ripple.y - 16 }}
+                />
+              )}
               <ShoppingCart className="mr-1 h-4 w-4" />
-              {sold ? "Nuk ka stok" : "Shto"}
+              {sold ? t("product.noStock") : t("product.add")}
             </Button>
+
           </div>
         </div>
       </div>

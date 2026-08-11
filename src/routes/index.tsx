@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { SiteFooter } from "@/components/store/site-footer";
+import { useI18n } from "@/lib/i18n";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -38,6 +40,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Storefront() {
+  const { t } = useI18n();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [maxPrice, setMaxPrice] = useState<string>("");
@@ -74,28 +77,32 @@ function Storefront() {
 
       <section className="relative overflow-hidden border-b">
         <div className="absolute inset-0 gradient-brand opacity-95" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="breeze-wave absolute -left-10 top-10 h-40 w-[130%] rounded-[100%] bg-white/10 blur-3xl" />
+          <div className="breeze-wave absolute -left-10 bottom-0 h-32 w-[130%] rounded-[100%] bg-white/10 blur-2xl" style={{ animationDelay: "-6s" }} />
+        </div>
         <div className="relative mx-auto max-w-7xl px-4 py-12 text-white sm:px-6 sm:py-20">
           <h1 className="max-w-2xl text-4xl font-extrabold leading-tight sm:text-5xl">
-            Bli më lehtë. Pranoje më shpejt.
+            {t("hero.title")}
           </h1>
           <p className="mt-3 max-w-xl text-white/90">
-            FlladituKS — produktet që duash, me dërgesë në të gjithë Kosovën dhe pagesë në dorë.
+            {t("hero.sub")}
           </p>
           <div className="mt-6 flex flex-wrap gap-3 text-sm">
             <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 backdrop-blur">
-              <Truck className="h-4 w-4" /> Dorëzim i shpejtë
+              <Truck className="h-4 w-4" /> {t("hero.fast")}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 backdrop-blur">
-              <Banknote className="h-4 w-4" /> Pagesa në dorë
+              <Banknote className="h-4 w-4" /> {t("hero.cod")}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 backdrop-blur">
-              <ShieldCheck className="h-4 w-4" /> Cilësi e garantuar
+              <ShieldCheck className="h-4 w-4" /> {t("hero.quality")}
             </span>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <section id="produktet" className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -106,12 +113,12 @@ function Storefront() {
                 : "bg-card hover:bg-secondary"
             }`}
           >
-            <Flame className="h-4 w-4" /> Me Zbritje
+            <Flame className="h-4 w-4" /> {t("filters.deals")}
           </button>
           <div className="ml-auto flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 shadow-sm">
             <Switch id="hide-sold" checked={hideSold} onCheckedChange={setHideSold} />
             <Label htmlFor="hide-sold" className="cursor-pointer text-sm">
-              Fshih produktet e shitura
+              {t("filters.hideSold")}
             </Label>
           </div>
         </div>
@@ -122,7 +129,7 @@ function Storefront() {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Kërko produkt..."
+              placeholder={t("filters.search")}
               className="border-0 bg-transparent shadow-none focus-visible:ring-0"
             />
           </div>
@@ -130,10 +137,10 @@ function Storefront() {
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="w-[170px]">
-                <SelectValue placeholder="Kategoria" />
+                <SelectValue placeholder={t("filters.category")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Të gjitha kategoritë</SelectItem>
+                <SelectItem value="all">{t("filters.allCategories")}</SelectItem>
                 {CATEGORIES.map((c) => (
                   <SelectItem key={c} value={c}>
                     {c}
@@ -146,7 +153,7 @@ function Storefront() {
               min={0}
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder="Çmimi max (€)"
+              placeholder={t("filters.maxPrice")}
               className="w-[130px]"
             />
           </div>
@@ -160,9 +167,9 @@ function Storefront() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-            <p className="text-lg font-medium">Asnjë produkt nuk u gjet</p>
+            <p className="text-lg font-medium">{t("empty.title")}</p>
             <p className="mt-1 text-sm">
-              Provo të ndryshosh filtrat ose kthehu më vonë.
+              {t("empty.sub")}
             </p>
           </div>
         ) : (
@@ -174,11 +181,7 @@ function Storefront() {
         )}
       </section>
 
-      <footer className="mt-12 border-t bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-8 text-sm text-muted-foreground sm:px-6">
-          © {new Date().getFullYear()} FlladituKS — Të gjitha të drejtat e rezervuara.
-        </div>
-      </footer>
+      <SiteFooter />
 
       <CartDrawer />
     </div>
