@@ -407,6 +407,7 @@ export const createOrder = createServerFn({ method: "POST" })
       address: string;
       notes?: string | null;
       payment_method?: string;
+      discount_code?: string | null;
       items: Array<z.infer<typeof orderItemSchema>>;
     }) =>
       z
@@ -424,6 +425,7 @@ export const createOrder = createServerFn({ method: "POST" })
           payment_method: z
             .enum(["cash_on_delivery"])
             .default("cash_on_delivery"),
+          discount_code: z.string().trim().max(40).nullable().optional(),
           items: z.array(orderItemSchema).min(1).max(100),
         })
         .parse(d),
@@ -433,7 +435,30 @@ export const createOrder = createServerFn({ method: "POST" })
     const itemsTotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const shippingPrice = await readShippingPriceServer();
     const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
-    const total = itemsTotal + shippingCost;
+
+    // --- Re-validate promo code server-side ---
+    let discountRow: DiscountRow | null = null;
+    let discountAmount = 0;
+    if (data.discount_code) {
+      const { data: row } = await supabaseAdmin
+        .from("discounts")
+        .select("*")
+        .eq("code", data.discount_code.toUpperCase())
+        .maybeSingle();
+      const d = row as unknown as DiscountRow | null;
+      const now = Date.now();
+      const usable =
+        !!d &&
+        d.is_active &&
+        (!d.start_date || now >= new Date(d.start_date).getTime()) &&
+        (!d.expires_at || now <= new Date(d.expires_at).getTime()) &&
+        (d.max_uses == null || d.used_count < d.max_uses);
+      if (!usable) throw new Error("Kodi i zbritjes nuk është i vlefshëm");
+      discountRow = d!;
+      discountAmount = computeDiscountAmount(d!, itemsTotal);
+    }
+
+    const total = Math.max(0, itemsTotal - discountAmount) + shippingCost;
 
     // --- Validate stock availability against current DB values ---
     const ids = Array.from(new Set(data.items.map((i) => i.id).filter(Boolean)));
