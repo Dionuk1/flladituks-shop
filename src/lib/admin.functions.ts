@@ -496,6 +496,9 @@ export const createOrder = createServerFn({ method: "POST" })
         shipping_cost: shippingCost,
         payment_method: data.payment_method,
         status: "pending",
+        discount_id: discountRow?.id ?? null,
+        discount_code: discountRow?.code ?? null,
+        discount_amount: discountAmount,
       })
       .select("id, order_no")
       .single();
@@ -503,6 +506,14 @@ export const createOrder = createServerFn({ method: "POST" })
 
     // --- Decrement stock immediately (reserve) ---
     await decrementStockForOrder(data.items);
+
+    // --- Increment promo code usage ---
+    if (discountRow) {
+      await supabaseAdmin
+        .from("discounts")
+        .update({ used_count: Number(discountRow.used_count ?? 0) + 1 })
+        .eq("id", discountRow.id);
+    }
 
     return { id: row.id, order_no: (row as any).order_no as number | null };
   });
