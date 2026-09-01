@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminDiscountsRouteImport } from './routes/admin.discounts'
 import { Route as AdminFinancatRouteImport } from './routes/admin.financat'
 import { Route as AdminImportoRouteImport } from './routes/admin.importo'
 import { Route as AdminPorositeRouteImport } from './routes/admin.porosite'
@@ -33,6 +34,11 @@ const AdminRoute = AdminRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDiscountsRoute = AdminDiscountsRouteImport.update({
+  id: '/discounts',
+  path: '/discounts',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFinancatRoute = AdminFinancatRouteImport.update({
@@ -74,6 +80,7 @@ const PorosiaIdRoute = PorosiaIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/discounts': typeof AdminDiscountsRoute
   '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/discounts': typeof AdminDiscountsRoute
   '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/discounts': typeof AdminDiscountsRoute
   '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/admin/discounts'
     | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin/discounts'
     | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin/discounts'
     | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
@@ -172,6 +184,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/discounts': {
+      id: '/admin/discounts'
+      path: '/discounts'
+      fullPath: '/admin/discounts'
+      preLoaderRoute: typeof AdminDiscountsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/financat': {
@@ -227,6 +246,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminDiscountsRoute: typeof AdminDiscountsRoute
   AdminFinancatRoute: typeof AdminFinancatRoute
   AdminImportoRoute: typeof AdminImportoRoute
   AdminPorositeRoute: typeof AdminPorositeRoute
@@ -237,6 +257,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminDiscountsRoute: AdminDiscountsRoute,
   AdminFinancatRoute: AdminFinancatRoute,
   AdminImportoRoute: AdminImportoRoute,
   AdminPorositeRoute: AdminPorositeRoute,
@@ -256,3 +277,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -407,6 +407,7 @@ export const createOrder = createServerFn({ method: "POST" })
       address: string;
       notes?: string | null;
       payment_method?: string;
+      discount_code?: string | null;
       items: Array<z.infer<typeof orderItemSchema>>;
     }) =>
       z
@@ -424,6 +425,7 @@ export const createOrder = createServerFn({ method: "POST" })
           payment_method: z
             .enum(["cash_on_delivery"])
             .default("cash_on_delivery"),
+          discount_code: z.string().trim().max(40).nullable().optional(),
           items: z.array(orderItemSchema).min(1).max(100),
         })
         .parse(d),
@@ -433,7 +435,30 @@ export const createOrder = createServerFn({ method: "POST" })
     const itemsTotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const shippingPrice = await readShippingPriceServer();
     const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
-    const total = itemsTotal + shippingCost;
+
+    // --- Re-validate promo code server-side ---
+    let discountRow: DiscountRow | null = null;
+    let discountAmount = 0;
+    if (data.discount_code) {
+      const { data: row } = await supabaseAdmin
+        .from("discounts")
+        .select("*")
+        .eq("code", data.discount_code.toUpperCase())
+        .maybeSingle();
+      const d = row as unknown as DiscountRow | null;
+      const now = Date.now();
+      const usable =
+        !!d &&
+        d.is_active &&
+        (!d.start_date || now >= new Date(d.start_date).getTime()) &&
+        (!d.expires_at || now <= new Date(d.expires_at).getTime()) &&
+        (d.max_uses == null || d.used_count < d.max_uses);
+      if (!usable) throw new Error("Kodi i zbritjes nuk është i vlefshëm");
+      discountRow = d!;
+      discountAmount = computeDiscountAmount(d!, itemsTotal);
+    }
+
+    const total = Math.max(0, itemsTotal - discountAmount) + shippingCost;
 
     // --- Validate stock availability against current DB values ---
     const ids = Array.from(new Set(data.items.map((i) => i.id).filter(Boolean)));
@@ -471,6 +496,9 @@ export const createOrder = createServerFn({ method: "POST" })
         shipping_cost: shippingCost,
         payment_method: data.payment_method,
         status: "pending",
+        discount_id: discountRow?.id ?? null,
+        discount_code: discountRow?.code ?? null,
+        discount_amount: discountAmount,
       })
       .select("id, order_no")
       .single();
@@ -478,6 +506,14 @@ export const createOrder = createServerFn({ method: "POST" })
 
     // --- Decrement stock immediately (reserve) ---
     await decrementStockForOrder(data.items);
+
+    // --- Increment promo code usage ---
+    if (discountRow) {
+      await supabaseAdmin
+        .from("discounts")
+        .update({ used_count: Number(discountRow.used_count ?? 0) + 1 })
+        .eq("id", discountRow.id);
+    }
 
     return { id: row.id, order_no: (row as any).order_no as number | null };
   });
@@ -931,4 +967,152 @@ export const adminUploadExpenseReceipt = createServerFn({ method: "POST" })
     if (signed?.signedUrl) return { url: signed.signedUrl };
     const { data: pub } = supabaseAdmin.storage.from("flladituks-images").getPublicUrl(path);
     return { url: pub.publicUrl };
+  });
+
+/* ---------------- Discount / Promo codes ---------------- */
+
+export type DiscountRow = {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  start_date: string;
+  expires_at: string | null;
+  max_uses: number | null;
+  used_count: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+const discountInput = z.object({
+  id: z.string().uuid().optional(),
+  code: z
+    .string()
+    .trim()
+    .min(3)
+    .max(40)
+    .regex(/^[A-Za-z0-9_-]+$/, "Vetëm shkronja, numra, - dhe _"),
+  discount_type: z.enum(["percentage", "fixed"]),
+  discount_value: z.number().positive().max(100000),
+  start_date: z.string().min(1),
+  expires_at: z.string().nullable().optional(),
+  max_uses: z.number().int().positive().nullable().optional(),
+  is_active: z.boolean().default(true),
+});
+
+export const adminListDiscounts = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("discounts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as unknown as DiscountRow[];
+  });
+
+export const adminSaveDiscount = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string } & Record<string, unknown>) => ({
+    token: String((d as any).token ?? ""),
+    values: discountInput.parse((d as any).values),
+  }))
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const v = data.values;
+    if (v.discount_type === "percentage" && v.discount_value > 100)
+      throw new Error("Përqindja nuk mund të jetë mbi 100%");
+    const payload = {
+      code: v.code.toUpperCase(),
+      discount_type: v.discount_type,
+      discount_value: v.discount_value,
+      start_date: new Date(v.start_date).toISOString(),
+      expires_at: v.expires_at ? new Date(v.expires_at).toISOString() : null,
+      max_uses: v.max_uses ?? null,
+      is_active: v.is_active,
+    };
+    if (v.id) {
+      const { error } = await supabaseAdmin.from("discounts").update(payload).eq("id", v.id);
+      if (error) throw new Error(error.message);
+      return { id: v.id };
+    }
+    const { data: row, error } = await supabaseAdmin
+      .from("discounts")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message.includes("duplicate") ? "Ky kod ekziston tashmë" : error.message);
+    return { id: (row as any).id as string };
+  });
+
+export const adminToggleDiscount = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string; is_active: boolean }) =>
+    z.object({ token: z.string(), id: z.string().uuid(), is_active: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("discounts")
+      .update({ is_active: data.is_active })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteDiscount = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string }) =>
+    z.object({ token: z.string(), id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("discounts").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+function computeDiscountAmount(
+  row: { discount_type: string; discount_value: number },
+  subtotal: number,
+) {
+  const value = Number(row.discount_value ?? 0);
+  const raw = row.discount_type === "percentage" ? (subtotal * value) / 100 : value;
+  return Math.max(0, Math.min(subtotal, Math.round(raw * 100) / 100));
+}
+
+/** Server-side validation of a promo code. Public (checkout). */
+export const validateDiscountCode = createServerFn({ method: "POST" })
+  .inputValidator((d: { code: string; subtotal: number }) =>
+    z
+      .object({ code: z.string().trim().min(1).max(40), subtotal: z.number().min(0).max(1000000) })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const code = data.code.toUpperCase();
+    const { data: row } = await supabaseAdmin
+      .from("discounts")
+      .select("*")
+      .eq("code", code)
+      .maybeSingle();
+    const d = row as unknown as DiscountRow | null;
+    if (!d) return { valid: false as const, error: "Kod i pavlefshëm" };
+    if (!d.is_active) return { valid: false as const, error: "Ky kod është çaktivizuar" };
+    const now = Date.now();
+    if (d.start_date && now < new Date(d.start_date).getTime())
+      return { valid: false as const, error: "Ky kod nuk ka filluar ende" };
+    if (d.expires_at && now > new Date(d.expires_at).getTime())
+      return { valid: false as const, error: "Kodi ka skaduar" };
+    if (d.max_uses != null && d.used_count >= d.max_uses)
+      return { valid: false as const, error: "Limiti i përdorimit është arritur" };
+    return {
+      valid: true as const,
+      code: d.code,
+      discount_type: d.discount_type,
+      discount_value: Number(d.discount_value),
+      amount: computeDiscountAmount(d, data.subtotal),
+    };
   });

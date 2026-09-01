@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CitySelect } from "@/components/ui/city-select";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/cities";
-import { createOrder, getShippingPrice } from "@/lib/admin.functions";
+import { createOrder, getShippingPrice, validateDiscountCode } from "@/lib/admin.functions";
 import { sendOrderNotification } from "@/lib/email-notify";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
@@ -47,15 +47,56 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
   const [success, setSuccess] = useState(false);
   const { t } = useI18n();
   const [shippingPrice, setShippingPrice] = useState(2.0);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoChecking, setPromoChecking] = useState(false);
+  const [promo, setPromo] = useState<{ code: string; amount: number } | null>(null);
 
   useEffect(() => {
     getShippingPrice().then((r) => setShippingPrice(r.price)).catch(() => {});
   }, []);
 
+  // Re-validate the applied code whenever the cart subtotal changes.
+  useEffect(() => {
+    if (!promo) return;
+    let cancelled = false;
+    validateDiscountCode({ data: { code: promo.code, subtotal: itemsTotal } })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.valid) setPromo({ code: r.code, amount: r.amount });
+        else setPromo(null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemsTotal]);
+
+  const discountAmount = promo ? Math.min(promo.amount, itemsTotal) : 0;
   const shippingCost = itemsTotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingPrice;
-  const total = itemsTotal + shippingCost;
+  const total = Math.max(0, itemsTotal - discountAmount) + shippingCost;
 
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  async function applyPromo() {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    setPromoChecking(true);
+    try {
+      const res = await validateDiscountCode({ data: { code, subtotal: itemsTotal } });
+      if (res.valid) {
+        setPromo({ code: res.code, amount: res.amount });
+        toast.success(`Kodi ${res.code} u aplikua!`);
+      } else {
+        setPromo(null);
+        toast.error(res.error);
+      }
+    } catch (e: any) {
+      toast.error("Gabim gjatë verifikimit", { description: e?.message });
+    } finally {
+      setPromoChecking(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

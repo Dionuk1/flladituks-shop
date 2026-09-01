@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock, Boxes, UserRound, Menu, Coins } from "lucide-react";
+import { Package, PlusCircle, FileSpreadsheet, ClipboardList, LogOut, Store, Lock, Boxes, UserRound, Menu, Coins, Ticket } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { isAdmin, loginAdmin, logoutAdmin } from "@/lib/admin-auth";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const navItems = [
   { to: "/admin/porosite", label: "Porositë", icon: ClipboardList },
   { to: "/admin/private", label: "Porosi Private", icon: UserRound },
   { to: "/admin/financat", label: "Financat", icon: Coins },
+  { to: "/admin/discounts", label: "Kodet e Zbritjes", icon: Ticket },
 ];
 
 function AdminLayout() {
