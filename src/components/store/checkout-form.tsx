@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CitySelect } from "@/components/ui/city-select";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/cities";
-import { createOrder, getShippingPrice } from "@/lib/admin.functions";
+import { createOrder, getShippingPrice, validateDiscountCode } from "@/lib/admin.functions";
 import { sendOrderNotification } from "@/lib/email-notify";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
