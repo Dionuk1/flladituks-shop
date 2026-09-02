@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingCart, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingCart, ImageOff, ChevronLeft, ChevronRight, Flame, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -41,6 +41,14 @@ export function discountPercent(price: number, oldPrice?: number | null): number
   return Math.round(((o - p) / o) * 100);
 }
 
+function stockUrgency(stock: number): string | null {
+  if (stock <= 0) return null;
+  if (stock === 1) return "🔥 Vetëm 1 në stok — Porosit tani!";
+  if (stock <= 3) return `🔥 Vetëm ${stock} në stok — Porosit tani!`;
+  if (stock <= 5) return "🔥 Sasi e kufizuar!";
+  return null;
+}
+
 export function ProductCard({ product }: { product: Product }) {
   const { add, setOpen, items } = useCart();
   const { t } = useI18n();
@@ -51,6 +59,7 @@ export function ProductCard({ product }: { product: Product }) {
   const gallery = getGallery(product);
   const cover = gallery[0] ?? null;
   const discount = discountPercent(product.price, product.old_price);
+  const urgency = available ? stockUrgency(Number(product.stock ?? 0)) : null;
 
   function handleAdd(e?: React.MouseEvent) {
     e?.stopPropagation();
@@ -79,17 +88,17 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <>
       <div
-        className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_18px_40px_-16px_color-mix(in_oklab,var(--primary)_65%,transparent)]"
+        className="group animate-fade-in flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-lg backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-2xl hover:shadow-[0_28px_60px_-20px_color-mix(in_oklab,var(--primary)_70%,transparent)] sm:flex-row"
         onClick={() => setDetailOpen(true)}
       >
-        <div className="relative aspect-square overflow-hidden bg-secondary">
+        <div className="relative aspect-square overflow-hidden bg-secondary sm:w-2/5 sm:shrink-0">
 
           {cover ? (
             <img
               src={cover}
               alt={product.title}
               loading="lazy"
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-110"
             />
           ) : (
             <div className="grid h-full w-full place-items-center text-muted-foreground">
@@ -133,15 +142,20 @@ export function ProductCard({ product }: { product: Product }) {
           ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col gap-2 p-4">
-          <h3 className="line-clamp-1 font-semibold">{product.title}</h3>
+        <div className="flex flex-1 flex-col gap-2 p-5">
+          <h3 className="line-clamp-2 text-lg font-bold tracking-tight sm:text-xl">{product.title}</h3>
+          {urgency && (
+            <span className="inline-flex w-fit animate-pulse items-center gap-1 rounded-full bg-destructive/15 px-3 py-1 text-xs font-bold text-destructive ring-1 ring-destructive/40 shadow-[0_0_18px_-4px_color-mix(in_oklab,var(--destructive)_70%,transparent)]">
+              <Flame className="h-3.5 w-3.5" /> {urgency}
+            </span>
+          )}
           {product.description && (
-            <p className="line-clamp-2 text-sm text-muted-foreground">{product.description}</p>
+            <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
           )}
           <div className="mt-auto flex items-end justify-between gap-2 pt-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                <span className="whitespace-nowrap text-lg font-bold text-primary">
+                <span className="whitespace-nowrap text-2xl font-extrabold text-primary">
                   {formatPrice(product.price)}
                 </span>
                 {discount && (
@@ -316,6 +330,14 @@ function ProductDetailDialog({
             <p className="text-sm text-muted-foreground">
               {sold ? "E shitur" : available ? `${product.stock} në stok` : "I padisponueshëm"}
             </p>
+            {available && stockUrgency(Number(product.stock ?? 0)) && (
+              <span className="inline-flex w-fit animate-pulse items-center gap-1 rounded-full bg-destructive/15 px-3 py-1 text-xs font-bold text-destructive ring-1 ring-destructive/40 shadow-[0_0_18px_-4px_color-mix(in_oklab,var(--destructive)_70%,transparent)]">
+                <Flame className="h-3.5 w-3.5" /> {stockUrgency(Number(product.stock ?? 0))}
+              </span>
+            )}
+            <p className="text-xs text-muted-foreground">
+              🚚 Dërgesa në të gjithë Kosovën · Falas mbi 25.00 € · Pagesa në dorëzim
+            </p>
             {product.description && (
               <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                 {product.description}
@@ -338,15 +360,34 @@ function ProductDetailDialog({
               </div>
             )}
 
-            <Button
-              size="lg"
-              disabled={!available}
-              onClick={onAdd}
-              className="mt-auto w-full rounded-full"
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              {sold ? "Nuk ka stok" : "Shto në shportë"}
-            </Button>
+            <div className="mt-auto flex flex-col gap-2 pt-2">
+              <Button
+                size="lg"
+                disabled={!available}
+                onClick={onAdd}
+                className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95"
+              >
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                {sold ? "Nuk ka stok" : "Shto në shportë"}
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95"
+              >
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    `Përshëndetje! Jam i interesuar për produktin "${product.title}" (${formatPrice(product.price)}).`,
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Porosit në WhatsApp
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
