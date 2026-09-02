@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -125,6 +125,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
             price: i.price,
             quantity: i.quantity,
           })),
+          discount_code: promo?.code ?? null,
         },
       });
       clear();
@@ -306,6 +307,12 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
             {shippingCost === 0 ? t("checkout.free") : formatPrice(shippingCost)}
           </span>
         </div>
+        {promo && discountAmount > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Zbritje ({promo.code})</span>
+            <span className="font-semibold text-success">−{formatPrice(discountAmount)}</span>
+          </div>
+        )}
         {itemsTotal <= FREE_SHIPPING_THRESHOLD && (
           <p className="text-xs text-muted-foreground">
             Transporti falas për porositë mbi {formatPrice(FREE_SHIPPING_THRESHOLD)}.
