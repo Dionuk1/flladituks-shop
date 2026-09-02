@@ -192,6 +192,17 @@ function InvoicePage() {
                 <span>Nëntotali</span>
                 <span>{formatPrice(itemsTotal)}</span>
               </div>
+              {Number((data as any).discount_amount ?? 0) > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>
+                    Zbritje
+                    {(data as any).discount_code ? ` (${(data as any).discount_code})` : ""}
+                  </span>
+                  <span className="font-semibold text-success">
+                    −{formatPrice(Number((data as any).discount_amount))}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-muted-foreground">
                 <span>Transporti</span>
                 <span className={shipping === 0 ? "font-semibold text-success" : ""}>
