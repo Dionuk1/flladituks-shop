@@ -239,6 +239,47 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="promo">Kod promocional</Label>
+          {promo ? (
+            <div className="flex items-center gap-2 rounded-xl border border-success/40 bg-success/10 p-3 text-sm">
+              <Tag className="h-4 w-4 text-success" />
+              <span className="flex-1 font-semibold">
+                {promo.code} · −{formatPrice(discountAmount)}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPromo(null);
+                  setPromoInput("");
+                }}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground hover:text-destructive"
+              >
+                <X className="h-3.5 w-3.5" /> Largo
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                id="promo"
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                placeholder="P.sh. SUMMER2026"
+                className="uppercase"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={applyPromo}
+                disabled={promoChecking || !promoInput.trim()}
+                className="rounded-xl"
+              >
+                {promoChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apliko"}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <Label>{t("checkout.payment")}</Label>
           <div className="flex items-center gap-3 rounded-xl border border-primary bg-primary/5 p-3 text-sm ring-1 ring-primary">
             <span className="text-lg">💵</span>
