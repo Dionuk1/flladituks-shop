@@ -520,6 +520,9 @@ function PrivateOrdersPage() {
                   <div className="flex justify-end gap-1">
                     <OrderQuickActions
                       phone={r.phone}
+                      customerName={r.customer_name}
+                      orderNo={r.order_no}
+                      orderId={r.id}
                       status={r.status}
                       onStatusChange={(status: string) => changeStatus.mutate({ row: r, status })}
                       onPrint={() =>
