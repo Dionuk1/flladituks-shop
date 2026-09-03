@@ -167,11 +167,17 @@ export function buildWhatsAppLink(o: OrderLike) {
   return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
 }
 
-/** Normalize a Kosovo phone number to international format for wa.me links. */
+/** Normalize Kosovo/Albania phone numbers to international format for wa.me links. */
 export function normalizePhone(phone: string | null | undefined) {
   const digits = String(phone ?? "").replace(/[^\d]/g, "");
   if (!digits) return "";
-  if (digits.startsWith("383")) return digits;
+  // Already international: keep as-is.
+  if (digits.startsWith("383") || digits.startsWith("355")) return digits;
+  // Kosovo mobile prefixes (044, 045, 046, 048, 049).
+  if (digits.startsWith("04")) return `383${digits.slice(1)}`;
+  // Albania mobile prefixes (067, 068, 069).
+  if (digits.startsWith("06")) return `355${digits.slice(1)}`;
+  // Generic local number: default to Kosovo.
   if (digits.startsWith("0")) return `383${digits.slice(1)}`;
   return digits;
 }
