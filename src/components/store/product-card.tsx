@@ -346,9 +346,18 @@ function ProductDetailDialog({
                 <Flame className="h-3.5 w-3.5" /> {stockUrgency(Number(product.stock ?? 0))}
               </span>
             )}
-            <p className="text-xs text-muted-foreground">
-              🚚 Dërgesa në të gjithë Kosovën · Falas mbi 25.00 € · Pagesa në dorëzim
-            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-secondary/70 px-2.5 py-1 font-medium">
+                <MapPin className="h-3.5 w-3.5 text-primary" /> {product.location ?? "Fushë Kosovë"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-semibold text-primary">
+                <Truck className="h-3.5 w-3.5" />
+                {Number(product.shipping_cost ?? 0) > 0
+                  ? `Transport ${formatPrice(product.shipping_cost)}`
+                  : "Dërgesë Falas"}
+              </span>
+            </div>
+
             {product.description && (
               <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                 {product.description}
