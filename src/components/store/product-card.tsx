@@ -375,30 +375,28 @@ function ProductDetailDialog({
               <Button
                 size="lg"
                 disabled={!available}
+                onClick={onExpress}
+                className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95"
+              >
+                <Zap className="mr-2 h-4 w-4" />
+                Porosit Tani (Express Checkout)
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={!available}
                 onClick={onAdd}
                 className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95"
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 {sold ? "Nuk ka stok" : "Shto në shportë"}
               </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95"
-              >
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(
-                    `Përshëndetje! Jam i interesuar për produktin "${product.title}" (${formatPrice(product.price)}).`,
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Porosit në WhatsApp
-                </a>
-              </Button>
+              <p className="flex items-start gap-2 rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                Kontrolloni pakon te dera me postierin para pagesës.
+              </p>
             </div>
+
           </div>
         </div>
       </DialogContent>
