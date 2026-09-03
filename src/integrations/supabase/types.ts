@@ -239,8 +239,10 @@ export type Database = {
           id: string
           image_url: string | null
           images: string[]
+          location: string
           old_price: number | null
           price: number
+          seller_id: string | null
           shipping_cost: number
           status: string
           stock: number
@@ -255,8 +257,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           images?: string[]
+          location?: string
           old_price?: number | null
           price?: number
+          seller_id?: string | null
           shipping_cost?: number
           status?: string
           stock?: number
@@ -271,12 +275,109 @@ export type Database = {
           id?: string
           image_url?: string | null
           images?: string[]
+          location?: string
           old_price?: number | null
           price?: number
+          seller_id?: string | null
           shipping_cost?: number
           status?: string
           stock?: number
           title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          city: string
+          created_at: string
+          email_verified: boolean
+          full_name: string
+          id: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          city?: string
+          created_at?: string
+          email_verified?: boolean
+          full_name?: string
+          id: string
+          phone?: string
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          email_verified?: boolean
+          full_name?: string
+          id?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sellers: {
+        Row: {
+          city: string
+          created_at: string
+          description: string
+          id: string
+          is_verified: boolean
+          name: string
+          slug: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          city?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_verified?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_verified?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -285,10 +386,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "buyer" | "seller" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -415,6 +522,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["buyer", "seller", "admin"],
+    },
   },
 } as const
