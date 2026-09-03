@@ -37,6 +37,8 @@ export type Product = {
   stock: number;
   status: string;
   shipping_cost?: number | null;
+  location?: string | null;
+
 };
 
 function getGallery(product: Product): string[] {
