@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { ShoppingCart, ImageOff, ChevronLeft, ChevronRight, Flame, MessageCircle } from "lucide-react";
+import {
+  ShoppingCart,
+  ImageOff,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  Zap,
+  MapPin,
+  Truck,
+  ShieldCheck,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,6 +37,8 @@ export type Product = {
   stock: number;
   status: string;
   shipping_cost?: number | null;
+  location?: string | null;
+
 };
 
 function getGallery(product: Product): string[] {
@@ -335,9 +348,18 @@ function ProductDetailDialog({
                 <Flame className="h-3.5 w-3.5" /> {stockUrgency(Number(product.stock ?? 0))}
               </span>
             )}
-            <p className="text-xs text-muted-foreground">
-              🚚 Dërgesa në të gjithë Kosovën · Falas mbi 25.00 € · Pagesa në dorëzim
-            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-secondary/70 px-2.5 py-1 font-medium">
+                <MapPin className="h-3.5 w-3.5 text-primary" /> {product.location ?? "Fushë Kosovë"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-semibold text-primary">
+                <Truck className="h-3.5 w-3.5" />
+                {Number(product.shipping_cost ?? 0) > 0
+                  ? `Transport ${formatPrice(product.shipping_cost)}`
+                  : "Dërgesë Falas"}
+              </span>
+            </div>
+
             {product.description && (
               <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                 {product.description}
@@ -364,30 +386,28 @@ function ProductDetailDialog({
               <Button
                 size="lg"
                 disabled={!available}
+                onClick={onExpress}
+                className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95"
+              >
+                <Zap className="mr-2 h-4 w-4" />
+                Porosit Tani (Express Checkout)
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={!available}
                 onClick={onAdd}
                 className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95"
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 {sold ? "Nuk ka stok" : "Shto në shportë"}
               </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95"
-              >
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(
-                    `Përshëndetje! Jam i interesuar për produktin "${product.title}" (${formatPrice(product.price)}).`,
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Porosit në WhatsApp
-                </a>
-              </Button>
+              <p className="flex items-start gap-2 rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                Kontrolloni pakon te dera me postierin para pagesës.
+              </p>
             </div>
+
           </div>
         </div>
       </DialogContent>
