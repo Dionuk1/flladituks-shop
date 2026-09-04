@@ -50,6 +50,18 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
           <LanguageSwitcher />
           <ThemeToggle />
           <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="rounded-full transition-all duration-300 hover:-translate-y-0.5 hover:text-primary"
+          >
+            <Link to="/auth">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Llogaria</span>
+            </Link>
+          </Button>
+
+          <Button
             variant="outline"
             size="sm"
             onClick={() => setOpen(true)}
