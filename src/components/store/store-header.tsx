@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ShoppingCart, Sparkles } from "lucide-react";
+import { ShoppingCart, Sparkles, User } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
