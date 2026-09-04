@@ -23,6 +23,7 @@ import { formatPrice } from "@/lib/cities";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
+import { ExpressOrderModal } from "./express-order-modal";
 
 export type Product = {
   id: string;
@@ -66,6 +67,7 @@ export function ProductCard({ product }: { product: Product }) {
   const { add, setOpen, items } = useCart();
   const { t } = useI18n();
   const [detailOpen, setDetailOpen] = useState(false);
+  const [expressOpen, setExpressOpen] = useState(false);
   const [ripple, setRipple] = useState<{ x: number; y: number } | null>(null);
   const sold = product.status === "sold";
   const available = !sold && product.stock > 0 && product.status === "available";
@@ -130,11 +132,16 @@ export function ProductCard({ product }: { product: Product }) {
               </Badge>
             )}
           </div>
-          {discount && !sold && (
-            <div className="absolute right-2 top-2 rounded-full bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground shadow">
-              -{discount}%
-            </div>
-          )}
+          <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+            <span className="rounded-full border border-white/30 bg-background/50 px-3 py-1 text-sm font-extrabold text-foreground shadow-lg backdrop-blur-md">
+              {formatPrice(product.price)}
+            </span>
+            {discount && !sold && (
+              <span className="rounded-full bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground shadow">
+                -{discount}%
+              </span>
+            )}
+          </div>
           {gallery.length > 1 && (
             <div className="absolute bottom-2 right-2 rounded-full bg-foreground/70 px-2 py-0.5 text-[10px] font-medium text-background">
               +{gallery.length} foto
@@ -162,6 +169,17 @@ export function ProductCard({ product }: { product: Product }) {
               <Flame className="h-3.5 w-3.5" /> {urgency}
             </span>
           )}
+          <div className="flex flex-wrap gap-1.5 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-secondary/70 px-2.5 py-1 font-medium">
+              <MapPin className="h-3.5 w-3.5 text-primary" /> {product.location ?? "Fushë Kosovë"}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-semibold text-primary">
+              <Truck className="h-3.5 w-3.5" />
+              {Number(product.shipping_cost ?? 0) > 0
+                ? `Transport ${formatPrice(product.shipping_cost)}`
+                : "Dërgesë Falas"}
+            </span>
+          </div>
           {product.description && (
             <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
           )}
@@ -200,6 +218,18 @@ export function ProductCard({ product }: { product: Product }) {
               <ShoppingCart className="mr-1 h-4 w-4" />
               {sold ? t("product.noStock") : t("product.add")}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!available}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpressOpen(true);
+              }}
+              className="rounded-full border-primary/40 text-primary transition-transform duration-200 hover:scale-105 active:scale-95"
+            >
+              <Zap className="mr-1 h-4 w-4" /> Porosit Tani
+            </Button>
 
           </div>
         </div>
@@ -217,6 +247,16 @@ export function ProductCard({ product }: { product: Product }) {
           handleAdd();
           setDetailOpen(false);
         }}
+        onExpress={() => {
+          setDetailOpen(false);
+          setExpressOpen(true);
+        }}
+      />
+
+      <ExpressOrderModal
+        open={expressOpen}
+        onOpenChange={setExpressOpen}
+        product={{ id: product.id, title: product.title, price: Number(product.price) }}
       />
     </>
   );
@@ -231,6 +271,7 @@ function ProductDetailDialog({
   open,
   onOpenChange,
   onAdd,
+  onExpress,
 }: {
   product: Product;
   gallery: string[];
@@ -240,6 +281,7 @@ function ProductDetailDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onAdd: () => void;
+  onExpress: () => void;
 }) {
   const [idx, setIdx] = useState(0);
   const total = gallery.length;
