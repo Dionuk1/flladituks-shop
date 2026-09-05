@@ -11,7 +11,6 @@ import {
   ShoppingCart,
   Sparkles,
   Tag,
-  X,
 } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
@@ -210,5 +209,3 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
     </header>
   );
 }
-
-export { X as _X };
