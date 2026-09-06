@@ -3,6 +3,28 @@ import { z } from "zod";
 
 const ADMIN_PASSWORD = () => process.env.ADMIN_PASSWORD || "flladituneser69";
 
+/**
+ * Reads the Supabase bearer token attached to the request (if any) and returns
+ * the signed-in user's id. Guests simply get null — never trust client input.
+ */
+async function currentUserIdOrNull(): Promise<string | null> {
+  try {
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const request = getRequest();
+    const authHeader = request?.headers?.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) return null;
+    const token = authHeader.slice("Bearer ".length).trim();
+    if (!token) return null;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) return null;
+    return data.user.id;
+  } catch {
+    return null;
+  }
+}
+
+
 function assertToken(token: unknown) {
   if (typeof token !== "string" || token.length === 0 || token !== ADMIN_PASSWORD()) {
     throw new Error("E paautorizuar");
