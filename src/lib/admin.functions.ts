@@ -523,6 +523,7 @@ export const createOrder = createServerFn({ method: "POST" })
         discount_id: discountRow?.id ?? null,
         discount_code: discountRow?.code ?? null,
         discount_amount: discountAmount,
+        user_id: buyerId,
       })
       .select("id, order_no")
       .single();
@@ -539,8 +540,68 @@ export const createOrder = createServerFn({ method: "POST" })
         .eq("id", discountRow.id);
     }
 
+    // --- Admin notification (unique per order → never duplicated) ---
+    await supabaseAdmin
+      .from("admin_notifications")
+      .upsert(
+        {
+          type: "new_order",
+          order_id: row.id,
+          order_no: (row as any).order_no ?? null,
+          customer_name: data.customer_name,
+          total,
+        },
+        { onConflict: "order_id" },
+      );
+
     return { id: row.id, order_no: (row as any).order_no as number | null };
   });
+
+// =================== Admin notifications ===================
+
+export const adminListNotifications = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("admin_notifications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(30);
+    if (error) throw new Error(error.message);
+    const list = (rows ?? []) as any[];
+    return { items: list, unread: list.filter((n) => !n.is_read).length };
+  });
+
+export const adminMarkNotificationRead = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string }) =>
+    z.object({ token: z.string(), id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("admin_notifications")
+      .update({ is_read: true })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminMarkAllNotificationsRead = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("admin_notifications")
+      .update({ is_read: true })
+      .eq("is_read", false);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const getOrderById = createServerFn({ method: "GET" })
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
