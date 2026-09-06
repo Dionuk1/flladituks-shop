@@ -432,9 +432,11 @@ export const createOrder = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const buyerId = await currentUserIdOrNull();
     const itemsTotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const shippingPrice = await readShippingPriceServer();
     const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
+
 
     // --- Re-validate promo code server-side ---
     let discountRow: DiscountRow | null = null;
