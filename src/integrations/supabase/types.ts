@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          created_at: string
+          customer_name: string
+          id: string
+          is_read: boolean
+          order_id: string | null
+          order_no: number | null
+          total: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name?: string
+          id?: string
+          is_read?: boolean
+          order_id?: string | null
+          order_no?: number | null
+          total?: number
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          id?: string
+          is_read?: boolean
+          order_id?: string | null
+          order_no?: number | null
+          total?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           key: string
@@ -123,6 +164,7 @@ export type Database = {
           status: string
           total: number
           tracking_number: string | null
+          user_id: string | null
         }
         Insert: {
           address: string
@@ -142,6 +184,7 @@ export type Database = {
           status?: string
           total?: number
           tracking_number?: string | null
+          user_id?: string | null
         }
         Update: {
           address?: string
@@ -161,6 +204,7 @@ export type Database = {
           status?: string
           total?: number
           tracking_number?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -296,29 +340,35 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string
           city: string
           created_at: string
           email_verified: boolean
           full_name: string
           id: string
+          last_name: string
           phone: string
           updated_at: string
         }
         Insert: {
+          address?: string
           city?: string
           created_at?: string
           email_verified?: boolean
           full_name?: string
           id: string
+          last_name?: string
           phone?: string
           updated_at?: string
         }
         Update: {
+          address?: string
           city?: string
           created_at?: string
           email_verified?: boolean
           full_name?: string
           id?: string
+          last_name?: string
           phone?: string
           updated_at?: string
         }
@@ -380,6 +430,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      wishlist: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

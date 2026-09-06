@@ -3,6 +3,28 @@ import { z } from "zod";
 
 const ADMIN_PASSWORD = () => process.env.ADMIN_PASSWORD || "flladituneser69";
 
+/**
+ * Reads the Supabase bearer token attached to the request (if any) and returns
+ * the signed-in user's id. Guests simply get null — never trust client input.
+ */
+async function currentUserIdOrNull(): Promise<string | null> {
+  try {
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const request = getRequest();
+    const authHeader = request?.headers?.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) return null;
+    const token = authHeader.slice("Bearer ".length).trim();
+    if (!token) return null;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) return null;
+    return data.user.id;
+  } catch {
+    return null;
+  }
+}
+
+
 function assertToken(token: unknown) {
   if (typeof token !== "string" || token.length === 0 || token !== ADMIN_PASSWORD()) {
     throw new Error("E paautorizuar");
@@ -432,9 +454,11 @@ export const createOrder = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const buyerId = await currentUserIdOrNull();
     const itemsTotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const shippingPrice = await readShippingPriceServer();
     const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
+
 
     // --- Re-validate promo code server-side ---
     let discountRow: DiscountRow | null = null;
@@ -499,6 +523,7 @@ export const createOrder = createServerFn({ method: "POST" })
         discount_id: discountRow?.id ?? null,
         discount_code: discountRow?.code ?? null,
         discount_amount: discountAmount,
+        user_id: buyerId,
       })
       .select("id, order_no")
       .single();
@@ -515,8 +540,68 @@ export const createOrder = createServerFn({ method: "POST" })
         .eq("id", discountRow.id);
     }
 
+    // --- Admin notification (unique per order → never duplicated) ---
+    await supabaseAdmin
+      .from("admin_notifications")
+      .upsert(
+        {
+          type: "new_order",
+          order_id: row.id,
+          order_no: (row as any).order_no ?? null,
+          customer_name: data.customer_name,
+          total,
+        },
+        { onConflict: "order_id" },
+      );
+
     return { id: row.id, order_no: (row as any).order_no as number | null };
   });
+
+// =================== Admin notifications ===================
+
+export const adminListNotifications = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("admin_notifications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(30);
+    if (error) throw new Error(error.message);
+    const list = (rows ?? []) as any[];
+    return { items: list, unread: list.filter((n) => !n.is_read).length };
+  });
+
+export const adminMarkNotificationRead = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id: string }) =>
+    z.object({ token: z.string(), id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("admin_notifications")
+      .update({ is_read: true })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminMarkAllNotificationsRead = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("admin_notifications")
+      .update({ is_read: true })
+      .eq("is_read", false);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const getOrderById = createServerFn({ method: "GET" })
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
