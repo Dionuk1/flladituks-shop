@@ -140,9 +140,12 @@ function RootComponent() {
       <ThemeProvider>
         <LanguageProvider>
           <CartProvider>
-            <Outlet />
-            <CookieBanner />
-            <Toaster richColors position="top-right" />
+            <WishlistProvider>
+              <Outlet />
+              <MobileNav />
+              <CookieBanner />
+              <Toaster richColors position="top-right" />
+            </WishlistProvider>
           </CartProvider>
         </LanguageProvider>
       </ThemeProvider>
