@@ -1,4 +1,5 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useBuyerNotifications } from "@/lib/notifications";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
@@ -11,6 +12,7 @@ import {
   ShoppingCart,
   Sparkles,
   Tag,
+  User,
 } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
@@ -40,7 +42,7 @@ const NAV = [
   { to: "/", label: "Ballina", icon: Home },
   { to: "/", label: "Oferta Javore", icon: Tag, hash: "produktet" },
   { to: "/", label: "Kategoritë", icon: LayoutGrid, hash: "produktet" },
-  { to: "/account", label: "Wishlist", icon: Heart },
+  { to: "/account", label: "Wishlist", icon: Heart, search: { tab: "wishlist" } },
 ] as const;
 
 export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
@@ -219,6 +221,7 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
                   key={item.label}
                   to={item.to}
                   hash={"hash" in item ? item.hash : undefined}
+                  search={("search" in item ? item.search : undefined) as never}
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition hover:bg-secondary"
                 >
@@ -242,9 +245,15 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
             </div>
 
             <Button asChild className="w-full rounded-full" onClick={() => setMenuOpen(false)}>
-              <Link to="/auth">
-                <LogIn className="mr-2 h-4 w-4" /> Hyr / Regjistrohu
-              </Link>
+              {notif.user ? (
+                <Link to="/account">
+                  <User className="mr-2 h-4 w-4" /> Llogaria
+                </Link>
+              ) : (
+                <Link to="/auth">
+                  <LogIn className="mr-2 h-4 w-4" /> Llogaria · Hyr / Regjistrohu
+                </Link>
+              )}
             </Button>
           </div>
         </SheetContent>
