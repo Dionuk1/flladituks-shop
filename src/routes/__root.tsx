@@ -16,6 +16,8 @@ import { CartProvider } from "@/lib/cart";
 import { ThemeProvider } from "@/lib/theme";
 import { LanguageProvider } from "@/lib/i18n";
 import { CookieBanner } from "@/components/store/cookie-banner";
+import { WishlistProvider } from "@/lib/wishlist";
+import { MobileNav } from "@/components/store/mobile-nav";
 
 function NotFoundComponent() {
   return (

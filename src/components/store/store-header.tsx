@@ -48,6 +48,9 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
   const { t, lang, setLang } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
+  const notif = useBuyerNotifications();
+  const navigate = useNavigate();
   const [bounce, setBounce] = useState(false);
   const prev = useRef(count);
 
@@ -97,17 +100,57 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
             </Button>
           )}
 
-          <Popover>
+          <Popover open={bellOpen} onOpenChange={(v) => { setBellOpen(v); if (v) void notif.reload(); }}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Njoftimet" className="rounded-full">
+              <Button variant="ghost" size="icon" aria-label="Njoftimet" className="relative rounded-full">
                 <Bell className="h-5 w-5" />
+                {notif.unread > 0 && (
+                  <span className="absolute right-0 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+                    {notif.unread}
+                  </span>
+                )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-64 rounded-2xl">
-              <p className="text-sm font-semibold">Njoftimet</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Nuk ke njoftime të reja për momentin.
-              </p>
+            <PopoverContent align="end" className="w-80 rounded-2xl p-0">
+              <div className="flex items-center justify-between border-b px-4 py-3">
+                <p className="text-sm font-semibold">Njoftimet</p>
+                {notif.unread > 0 && (
+                  <button type="button" onClick={() => void notif.markAllRead()} className="text-xs font-medium text-primary hover:underline">
+                    Shëno të gjitha si të lexuara
+                  </button>
+                )}
+              </div>
+              <div className="max-h-96 overflow-y-auto">
+                {!notif.user ? (
+                  <p className="p-4 text-sm text-muted-foreground">
+                    <Link to="/auth" className="font-medium text-primary" onClick={() => setBellOpen(false)}>Hyr</Link> për të parë njoftimet e porosive.
+                  </p>
+                ) : notif.items.length === 0 ? (
+                  <p className="p-4 text-sm text-muted-foreground">Nuk ke njoftime për momentin.</p>
+                ) : (
+                  notif.items.map((n) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => {
+                        void notif.markRead(n.id);
+                        setBellOpen(false);
+                        if (n.order_id) navigate({ to: "/porosia/$id", params: { id: n.order_id } });
+                      }}
+                      className={`flex w-full gap-2 border-b px-4 py-3 text-left transition last:border-0 hover:bg-secondary ${n.is_read ? "" : "bg-primary/5"}`}
+                    >
+                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.is_read ? "bg-transparent" : "bg-primary"}`} />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold">{n.title}</span>
+                        <span className="block text-xs text-muted-foreground">{n.body}</span>
+                        <span className="mt-1 block text-[10px] text-muted-foreground">
+                          {new Date(n.created_at).toLocaleString("sq-AL")}
+                        </span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
             </PopoverContent>
           </Popover>
 
