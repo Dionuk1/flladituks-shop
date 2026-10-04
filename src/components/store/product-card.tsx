@@ -24,6 +24,30 @@ import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { ExpressOrderModal } from "./express-order-modal";
+import { Heart } from "lucide-react";
+import { useWishlist } from "@/lib/wishlist";
+
+function HeartButton({ productId, className = "" }: { productId: string; className?: string }) {
+  const { has, toggle } = useWishlist();
+  const saved = has(productId);
+  return (
+    <button
+      type="button"
+      aria-label={saved ? "Hiq nga Wishlist" : "Shto në Wishlist"}
+      aria-pressed={saved}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void toggle(productId).then(() =>
+          toast.success(saved ? "U hoq nga Wishlist" : "U shtua në Wishlist"),
+        );
+      }}
+      className={`z-10 grid h-9 w-9 place-items-center rounded-full bg-background/80 shadow backdrop-blur transition hover:scale-110 ${className}`}
+    >
+      <Heart className={`h-4 w-4 ${saved ? "fill-destructive text-destructive" : "text-foreground"}`} />
+    </button>
+  );
+}
 
 export type Product = {
   id: string;
@@ -142,6 +166,7 @@ export function ProductCard({ product }: { product: Product }) {
               </span>
             )}
           </div>
+          <HeartButton productId={product.id} className="absolute bottom-2 left-2" />
           {gallery.length > 1 && (
             <div className="absolute bottom-2 right-2 rounded-full bg-foreground/70 px-2 py-0.5 text-[10px] font-medium text-background">
               +{gallery.length} foto
@@ -351,6 +376,7 @@ function ProductDetailDialog({
                 -{discount}%
               </div>
             )}
+            <HeartButton productId={product.id} className="absolute right-3 top-3" />
           </div>
 
           <div className="flex flex-col gap-3 p-5">

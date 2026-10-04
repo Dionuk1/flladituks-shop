@@ -145,6 +145,53 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_read: boolean
+          order_id: string | null
+          order_no: number | null
+          status: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          order_id?: string | null
+          order_no?: number | null
+          status?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          order_id?: string | null
+          order_no?: number | null
+          status?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           address: string
@@ -472,6 +519,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      order_status_label_sq: { Args: { _s: string }; Returns: string }
     }
     Enums: {
       app_role: "buyer" | "seller" | "admin"

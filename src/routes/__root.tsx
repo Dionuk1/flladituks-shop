@@ -16,6 +16,8 @@ import { CartProvider } from "@/lib/cart";
 import { ThemeProvider } from "@/lib/theme";
 import { LanguageProvider } from "@/lib/i18n";
 import { CookieBanner } from "@/components/store/cookie-banner";
+import { WishlistProvider } from "@/lib/wishlist";
+import { MobileNav } from "@/components/store/mobile-nav";
 
 function NotFoundComponent() {
   return (
@@ -140,9 +142,12 @@ function RootComponent() {
       <ThemeProvider>
         <LanguageProvider>
           <CartProvider>
-            <Outlet />
-            <CookieBanner />
-            <Toaster richColors position="top-right" />
+            <WishlistProvider>
+              <Outlet />
+              <MobileNav />
+              <CookieBanner />
+              <Toaster richColors position="top-right" />
+            </WishlistProvider>
           </CartProvider>
         </LanguageProvider>
       </ThemeProvider>
