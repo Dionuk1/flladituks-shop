@@ -19,7 +19,7 @@ export const Route = createFileRoute("/porosia/$id")({
     <div className="grid min-h-screen place-items-center p-6 text-center">
       <div>
         <h1 className="text-xl font-bold">Porosia nuk u gjet</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
         <Link to="/" className="mt-4 inline-block text-primary hover:underline">
           ← Kthehu te dyqani
         </Link>
