@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import { OrderSuccessOverlay } from "./order-success";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const schema = z.object({
   customer_name: z.string().trim().min(2, "Emër i pavlefshëm").max(120),
@@ -53,6 +54,34 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
 
   useEffect(() => {
     getShippingPrice().then((r) => setShippingPrice(r.price)).catch(() => {});
+  }, []);
+
+  // Auto-fill from the logged-in user's saved profile address (fields stay editable).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: s } = await supabase.auth.getSession();
+      const uid = s.session?.user.id;
+      if (!uid) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, last_name, phone, city, address")
+        .eq("id", uid)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const p = data as any;
+      const name = [p.full_name, p.last_name].filter(Boolean).join(" ").trim();
+      setForm((f) => ({
+        ...f,
+        customer_name: f.customer_name || name,
+        phone: f.phone || p.phone || "",
+        city: f.city || p.city || "",
+        address: f.address || p.address || "",
+      }));
+    })().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Re-validate the applied code whenever the cart subtotal changes.
