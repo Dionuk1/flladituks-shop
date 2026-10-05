@@ -160,7 +160,7 @@ function Storefront() {
         </div>
 
         {isLoading ? (
-          <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-64 animate-pulse rounded-2xl bg-secondary" />
             ))}
@@ -173,7 +173,7 @@ function Storefront() {
             </p>
           </div>
         ) : (
-          <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
             {filtered.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}

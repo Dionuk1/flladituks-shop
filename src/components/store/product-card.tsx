@@ -323,9 +323,14 @@ function ProductDetailDialog({
       onOpenChange={(v) => {
         onOpenChange(v);
         if (v) setIdx(0);
+        else
+          setTimeout(() => {
+            document.body.style.pointerEvents = "";
+            document.body.style.overflow = "";
+          }, 300);
       }}
     >
-      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-2xl p-0 sm:max-w-2xl [&>button:last-child]:z-20 [&>button:last-child]:flex [&>button:last-child]:h-9 [&>button:last-child]:w-9 [&>button:last-child]:items-center [&>button:last-child]:justify-center [&>button:last-child]:rounded-full [&>button:last-child]:bg-background/90 [&>button:last-child]:opacity-100 [&>button:last-child]:shadow-md [&>button:last-child]:backdrop-blur [&>button:last-child>svg]:h-5 [&>button:last-child>svg]:w-5">
         <DialogTitle className="sr-only">{product.title}</DialogTitle>
         <DialogDescription className="sr-only">
           Detajet e produktit {product.title}
