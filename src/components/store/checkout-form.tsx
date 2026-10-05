@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,13 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
   const [promoInput, setPromoInput] = useState("");
   const [promoChecking, setPromoChecking] = useState(false);
   const [promo, setPromo] = useState<{ code: string; amount: number } | null>(null);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setSignedIn(!!session));
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     getShippingPrice().then((r) => setShippingPrice(r.price)).catch(() => {});
@@ -132,6 +139,10 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
       toast.error("Gabim në formë", { description: parsed.error.issues[0]?.message });
+      return;
+    }
+    if (!signedIn) {
+      toast.error("Duhet të kyçeni për të porositur");
       return;
     }
     if (items.length === 0) {
@@ -351,10 +362,20 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
           <span className="text-muted-foreground">{t("checkout.totalPay")}</span>
           <span className="text-xl font-bold text-primary">{formatPrice(total)}</span>
         </div>
-        <Button type="submit" disabled={submitting} className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95" size="lg">
+        {signedIn === false ? (
+          <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
+            <p className="font-medium">Duhet të kyçeni për të përfunduar porosinë.</p>
+            <p className="text-xs text-muted-foreground">Shporta juaj ruhet — nuk humbet asgjë.</p>
+            <Button asChild className="w-full rounded-full" size="lg">
+              <Link to="/auth" onClick={onDone}>Kyçu / Regjistrohu</Link>
+            </Button>
+          </div>
+        ) : (
+        <Button type="submit" disabled={submitting || signedIn === null} className="w-full rounded-full transition-transform duration-200 hover:scale-[1.02] active:scale-95" size="lg">
           {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {t("checkout.confirm")}
         </Button>
+        )}
       </footer>
     </form>
     </>

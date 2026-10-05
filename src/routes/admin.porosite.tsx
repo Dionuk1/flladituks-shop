@@ -52,6 +52,9 @@ type Order = {
   id: string;
   order_no: number | null;
   customer_name: string;
+  user_id?: string | null;
+  account_name?: string | null;
+  account_email?: string | null;
   phone: string;
   city: string;
   address: string;
@@ -381,6 +384,13 @@ function OrdersPage() {
                         </Badge>
                       )}
                     </div>
+                    {o.user_id && (
+                      <p className="mt-1 inline-flex flex-wrap items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs text-primary">
+                        <span className="font-semibold">👤 Llogaria:</span>
+                        <span>{o.account_name || "—"}</span>
+                        {o.account_email && <span className="opacity-80">· {o.account_email}</span>}
+                      </p>
+                    )}
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Phone className="h-3.5 w-3.5" /> {o.phone}

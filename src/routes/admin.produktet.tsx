@@ -71,6 +71,7 @@ const MAX_IMAGES = 3;
 function ProductsPage() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
+  const [hideSoldOut, setHideSoldOut] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
   const { data: products = [], isLoading } = useQuery({
@@ -83,10 +84,12 @@ function ProductsPage() {
 
   const filtered = useMemo(
     () =>
-      products.filter((p) =>
-        q ? p.title.toLowerCase().includes(q.toLowerCase()) : true,
+      products.filter(
+        (p) =>
+          (q ? p.title.toLowerCase().includes(q.toLowerCase()) : true) &&
+          (!hideSoldOut || Number(p.stock) > 0),
       ),
-    [products, q],
+    [products, q, hideSoldOut],
   );
 
   async function setStatus(id: string, status: "available" | "sold") {
@@ -122,6 +125,15 @@ function ProductsPage() {
             Edito, menaxho stokun dhe shëno produktet si "E Shitur".
           </p>
         </div>
+        <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-sm">
+          <input
+            type="checkbox"
+            checked={hideSoldOut}
+            onChange={(e) => setHideSoldOut(e.target.checked)}
+            className="h-4 w-4 accent-[var(--primary)]"
+          />
+          Fshih produktet e shitura
+        </label>
         <div className="flex items-center gap-2 rounded-xl bg-card px-3 py-1.5 shadow-sm">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input

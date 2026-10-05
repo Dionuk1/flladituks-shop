@@ -127,17 +127,17 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <>
       <div
-        className="group animate-fade-in flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-lg backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-2xl hover:shadow-[0_28px_60px_-20px_color-mix(in_oklab,var(--primary)_70%,transparent)] sm:flex-row"
+        className="group animate-fade-in flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-lg backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-2xl hover:shadow-[0_28px_60px_-20px_color-mix(in_oklab,var(--primary)_70%,transparent)] h-full min-w-0"
         onClick={() => setDetailOpen(true)}
       >
-        <div className="relative aspect-square overflow-hidden bg-secondary sm:w-2/5 sm:shrink-0">
+        <div className="relative aspect-square w-full overflow-hidden bg-secondary">
 
           {cover ? (
             <img
               src={cover}
               alt={product.title}
               loading="lazy"
-              className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-110"
+              className="h-full w-full object-contain transition duration-700 ease-out group-hover:scale-105"
             />
           ) : (
             <div className="grid h-full w-full place-items-center text-muted-foreground">
@@ -187,17 +187,14 @@ export function ProductCard({ product }: { product: Product }) {
           ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col gap-2 p-5">
-          <h3 className="line-clamp-2 text-lg font-bold tracking-tight sm:text-xl">{product.title}</h3>
+        <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 sm:p-4">
+          <h3 className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-bold leading-5 tracking-tight sm:text-base">{product.title}</h3>
           {urgency && (
             <span className="inline-flex w-fit animate-pulse items-center gap-1 rounded-full bg-destructive/15 px-3 py-1 text-xs font-bold text-destructive ring-1 ring-destructive/40 shadow-[0_0_18px_-4px_color-mix(in_oklab,var(--destructive)_70%,transparent)]">
               <Flame className="h-3.5 w-3.5" /> {urgency}
             </span>
           )}
           <div className="flex flex-wrap gap-1.5 text-xs">
-            <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-secondary/70 px-2.5 py-1 font-medium">
-              <MapPin className="h-3.5 w-3.5 text-primary" /> {product.location ?? "Fushë Kosovë"}
-            </span>
             <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-semibold text-primary">
               <Truck className="h-3.5 w-3.5" />
               {Number(product.shipping_cost ?? 0) > 0
@@ -206,12 +203,12 @@ export function ProductCard({ product }: { product: Product }) {
             </span>
           </div>
           {product.description && (
-            <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
+            <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">{product.description}</p>
           )}
-          <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+          <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                <span className="whitespace-nowrap text-2xl font-extrabold text-primary">
+                <span className="whitespace-nowrap text-lg font-extrabold text-primary sm:text-xl">
                   {formatPrice(product.price)}
                 </span>
                 {discount && (
@@ -422,9 +419,6 @@ function ProductDetailDialog({
               </span>
             )}
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-secondary/70 px-2.5 py-1 font-medium">
-                <MapPin className="h-3.5 w-3.5 text-primary" /> {product.location ?? "Fushë Kosovë"}
-              </span>
               <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-semibold text-primary">
                 <Truck className="h-3.5 w-3.5" />
                 {Number(product.shipping_cost ?? 0) > 0
