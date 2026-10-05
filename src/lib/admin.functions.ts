@@ -69,7 +69,31 @@ export const adminListOrders = createServerFn({ method: "POST" })
     if (data.limit) q = q.limit(data.limit);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const list = (rows ?? []) as any[];
+    // Enrich authenticated orders with account name + email (existing profiles / auth users).
+    const uids = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean))) as string[];
+    if (uids.length) {
+      const { data: profs } = await supabaseAdmin
+        .from("profiles").select("id, full_name, last_name").in("id", uids);
+      const pmap: Record<string, string> = {};
+      for (const p of profs ?? [])
+        pmap[(p as any).id] = [(p as any).full_name, (p as any).last_name].filter(Boolean).join(" ").trim();
+      const emap: Record<string, string> = {};
+      await Promise.all(
+        uids.map(async (id) => {
+          try {
+            const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
+            if (u?.user?.email) emap[id] = u.user.email;
+          } catch {}
+        }),
+      );
+      for (const r of list) {
+        if (!r.user_id) continue;
+        r.account_name = pmap[r.user_id] || null;
+        r.account_email = emap[r.user_id] || null;
+      }
+    }
+    return list;
   });
 
 // Statuses where the order is considered to be holding reserved stock.
@@ -455,6 +479,7 @@ export const createOrder = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const buyerId = await currentUserIdOrNull();
+    if (!buyerId) throw new Error("Duhet të kyçeni për të përfunduar porosinë.");
     const itemsTotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const shippingPrice = await readShippingPriceServer();
     const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
