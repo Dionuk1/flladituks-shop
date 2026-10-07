@@ -71,7 +71,18 @@ const MAX_IMAGES = 3;
 function ProductsPage() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const [hideSoldOut, setHideSoldOut] = useState(false);
+  const [hideSoldOut, setHideSoldOutState] = useState(false);
+  useEffect(() => {
+    try {
+      setHideSoldOutState(localStorage.getItem("admin_hide_sold") === "1");
+    } catch {}
+  }, []);
+  const setHideSoldOut = (v: boolean) => {
+    setHideSoldOutState(v);
+    try {
+      localStorage.setItem("admin_hide_sold", v ? "1" : "0");
+    } catch {}
+  };
   const [editing, setEditing] = useState<Product | null>(null);
 
   const { data: products = [], isLoading } = useQuery({
@@ -140,7 +151,7 @@ function ProductsPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Kërko produkt..."
-            className="w-64 border-0 bg-transparent shadow-none focus-visible:ring-0"
+            className="w-full sm:w-64 border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
         </div>
       </div>
