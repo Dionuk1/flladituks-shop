@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { Gauge, Heart, LogOut, MapPin, Package, UserCog, ShoppingBag, Plus, Pencil, Loader2, Trash2 } from "lucide-react";
+import { Gauge, Heart, LogOut, MapPin, Package, UserCog, ShoppingBag, Plus, Pencil, Loader2, Trash2, ShoppingCart } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -371,7 +371,7 @@ function WishlistTab() {
                 <div className="flex min-w-0 flex-1 flex-col">
                   <p className="truncate font-semibold">{p.title}</p>
                   <p className="text-sm font-bold text-primary">{formatPrice(Number(p.price))}</p>
-                  <div className="mt-auto flex gap-2">
+                  <div className="mt-auto flex flex-wrap gap-2 pt-2">
                     <Button size="sm" className="rounded-full" disabled={!available} onClick={() => {
                       const inCart = items.find((i) => i.id === p.id)?.quantity ?? 0;
                       if (!available || inCart >= Number(p.stock)) { toast.error("Nuk ka më shumë sasi në stok për këtë produkt!"); return; }
