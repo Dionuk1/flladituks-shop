@@ -136,7 +136,7 @@ function AccountPage() {
             <Link to="/auth">Hyr ose Regjistrohu</Link>
           </Button>
         ) : (
-          <div className="mt-6 grid gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
             <nav className="flex gap-2 overflow-x-auto rounded-2xl border bg-card p-2 shadow-sm md:flex-col md:overflow-visible">
               {TABS.map((t) => (
                 <button
@@ -157,7 +157,7 @@ function AccountPage() {
               </button>
             </nav>
 
-            <section className="min-w-0 rounded-2xl border bg-card p-6 shadow-sm">
+            <section className="min-w-0 overflow-hidden rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
               {loading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
@@ -334,7 +334,7 @@ type WishProduct = { id: string; title: string; price: number; image_url: string
 
 function WishlistTab() {
   const { ids, toggle } = useWishlist();
-  const { add } = useCart() as unknown as { add: (p: unknown) => void };
+  const { add, items, setOpen } = useCart();
   const [products, setProducts] = useState<WishProduct[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -361,22 +361,26 @@ function WishlistTab() {
       ) : products.length === 0 ? (
         <p className="text-sm text-muted-foreground">Lista jote e dëshirave është bosh. Shtyp ♥ te një produkt për ta ruajtur.</p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {products.map((p) => {
             const img = p.images?.[0] ?? p.image_url;
             const available = p.stock > 0 && p.status === "available";
             return (
-              <div key={p.id} className="flex gap-3 rounded-2xl border p-3">
-                {img ? <img src={img} alt={p.title} className="h-20 w-20 rounded-xl object-cover" /> : <div className="h-20 w-20 rounded-xl bg-secondary" />}
+              <div key={p.id} className="flex min-w-0 gap-3 rounded-2xl border p-3">
+                {img ? <img src={img} alt={p.title} className="h-20 w-20 shrink-0 rounded-xl object-contain bg-secondary" /> : <div className="h-20 w-20 shrink-0 rounded-xl bg-secondary" />}
                 <div className="flex min-w-0 flex-1 flex-col">
                   <p className="truncate font-semibold">{p.title}</p>
                   <p className="text-sm font-bold text-primary">{formatPrice(Number(p.price))}</p>
                   <div className="mt-auto flex gap-2">
-                    {available && typeof add === "function" && (
-                      <Button size="sm" className="rounded-full" onClick={() => { add({ id: p.id, title: p.title, price: Number(p.price), image_url: img, stock: p.stock }); toast.success("U shtua në shportë"); }}>
-                        Në shportë
-                      </Button>
-                    )}
+                    <Button size="sm" className="rounded-full" disabled={!available} onClick={() => {
+                      const inCart = items.find((i) => i.id === p.id)?.quantity ?? 0;
+                      if (!available || inCart >= Number(p.stock)) { toast.error("Nuk ka më shumë sasi në stok për këtë produkt!"); return; }
+                      add({ id: p.id, title: p.title, price: Number(p.price), image_url: img, stock: Number(p.stock) });
+                      toast.success("U shtua në shportë", { description: p.title });
+                      setOpen(true);
+                    }}>
+                      <ShoppingCart className="mr-1 h-4 w-4" /> {available ? "Shto në shportë" : "Pa stok"}
+                    </Button>
                     <Button size="sm" variant="ghost" className="rounded-full text-destructive" onClick={() => void toggle(p.id)} aria-label="Hiq">
                       <Trash2 className="h-4 w-4" />
                     </Button>
