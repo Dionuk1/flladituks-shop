@@ -151,7 +151,7 @@ function ProductsPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Kërko produkt..."
-            className="w-64 border-0 bg-transparent shadow-none focus-visible:ring-0"
+            className="w-full sm:w-64 border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
         </div>
       </div>
