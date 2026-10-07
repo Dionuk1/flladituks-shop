@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { MarginHint } from "@/components/admin/margin-hint";
 import {
   Dialog,
@@ -136,14 +137,12 @@ function ProductsPage() {
             Edito, menaxho stokun dhe shëno produktet si "E Shitur".
           </p>
         </div>
-        <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-card px-3 py-2 text-sm shadow-sm">
-          <input
-            type="checkbox"
-            checked={hideSoldOut}
-            onChange={(e) => setHideSoldOut(e.target.checked)}
-            className="h-4 w-4 accent-[var(--primary)]"
-          />
-          Fshih produktet e shitura
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-card px-3 py-2 text-sm shadow-sm">
+          <Switch checked={hideSoldOut} onCheckedChange={setHideSoldOut} aria-label="Fshih produktet pa stok" />
+          <span>Fshih produktet e shitura</span>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${hideSoldOut ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+            {hideSoldOut ? "ON" : "OFF"}
+          </span>
         </label>
         <div className="flex items-center gap-2 rounded-xl bg-card px-3 py-1.5 shadow-sm">
           <Search className="h-4 w-4 text-muted-foreground" />
