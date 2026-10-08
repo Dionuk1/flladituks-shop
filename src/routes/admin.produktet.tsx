@@ -99,7 +99,7 @@ function ProductsPage() {
       products.filter(
         (p) =>
           (q ? p.title.toLowerCase().includes(q.toLowerCase()) : true) &&
-          (!hideSoldOut || Number(p.stock) > 0),
+          (!hideSoldOut || (p.status !== "sold" && Number(p.stock) > 0)),
       ),
     [products, q, hideSoldOut],
   );
@@ -129,7 +129,7 @@ function ProductsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 overflow-x-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Produktet</h1>
@@ -137,14 +137,14 @@ function ProductsPage() {
             Edito, menaxho stokun dhe shëno produktet si "E Shitur".
           </p>
         </div>
-        <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-card px-3 py-2 text-sm shadow-sm">
+        <label className="flex w-full cursor-pointer items-center gap-3 rounded-xl sm:w-auto bg-card px-3 py-2 text-sm shadow-sm">
           <Switch checked={hideSoldOut} onCheckedChange={setHideSoldOut} aria-label="Fshih produktet pa stok" />
-          <span>Fshih produktet e shitura</span>
+          <span className="min-w-0 flex-1">Fshih produktet e shitura</span>
           <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${hideSoldOut ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
             {hideSoldOut ? "ON" : "OFF"}
           </span>
         </label>
-        <div className="flex items-center gap-2 rounded-xl bg-card px-3 py-1.5 shadow-sm">
+        <div className="flex w-full min-w-0 items-center gap-2 rounded-xl bg-card px-3 py-1.5 shadow-sm sm:w-auto">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
             value={q}
@@ -174,7 +174,7 @@ function ProductsPage() {
             return (
               <li
                 key={p.id}
-                className="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm"
+                className="flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-sm sm:gap-3"
               >
                 <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary">
                   {p.image_url ? (
@@ -183,9 +183,9 @@ function ProductsPage() {
                     <ImageOff className="h-5 w-5 text-muted-foreground" />
                   )}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-[calc(100%-4.5rem)] sm:basis-auto">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="line-clamp-1 font-medium">{p.title}</p>
+                    <p className="line-clamp-2 break-words font-medium sm:line-clamp-1">{p.title}</p>
                     {sold ? (
                       <Badge className="rounded-full bg-destructive text-destructive-foreground">
                         E SHITUR
@@ -211,7 +211,7 @@ function ProductsPage() {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="break-words text-xs text-muted-foreground">
                     {formatPrice(p.price)}
                     {hasDiscount ? (
                       <span className="ml-1 line-through">{formatPrice(p.old_price!)}</span>
@@ -234,7 +234,7 @@ function ProductsPage() {
                   value={sold ? "sold" : "available"}
                   onValueChange={(v) => setStatus(p.id, v as "available" | "sold")}
                 >
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="min-w-0 flex-1 sm:w-[150px] sm:flex-none">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

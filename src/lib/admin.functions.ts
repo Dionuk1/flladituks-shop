@@ -284,7 +284,7 @@ export const adminUpdateProductStatus = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("products")
-      .update({ status: data.status })
+      .update(data.status === "sold" ? { status: "sold", stock: 0 } : { status: data.status })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
