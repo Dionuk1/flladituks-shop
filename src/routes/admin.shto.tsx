@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { MarginHint } from "@/components/admin/margin-hint";
+import { ProductExtraFields } from "@/components/admin/product-extra-fields";
 import { CATEGORIES, CONDITIONS, formatPrice } from "@/lib/cities";
 import { adminInsertProducts, adminUploadProductImage } from "@/lib/admin.functions";
 import { requireToken } from "@/lib/admin-auth";
@@ -46,6 +47,8 @@ function AddProductPage() {
   const [form, setForm] = useState(empty);
   const [images, setImages] = useState<ImgSlot[]>([]);
   const [urlInput, setUrlInput] = useState("");
+  const [sellerId, setSellerId] = useState<string | null>(null);
+  const [delivery, setDelivery] = useState<"24h" | "48h" | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
@@ -154,6 +157,8 @@ function AddProductPage() {
               image_url: urls[0] ?? null,
               images: urls,
               status: "available",
+              seller_id: sellerId,
+              delivery_time: delivery,
             },
           ],
         },
@@ -284,6 +289,13 @@ function AddProductPage() {
               </Select>
             </div>
           </div>
+
+          <ProductExtraFields
+            sellerId={sellerId}
+            onSellerChange={setSellerId}
+            delivery={delivery}
+            onDeliveryChange={setDelivery}
+          />
 
           <div>
             <Label>Foto e produktit (deri në {MAX_IMAGES})</Label>

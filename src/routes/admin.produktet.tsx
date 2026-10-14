@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { MarginHint } from "@/components/admin/margin-hint";
+import { ProductExtraFields } from "@/components/admin/product-extra-fields";
 import {
   Dialog,
   DialogContent,
@@ -65,6 +66,8 @@ type Product = {
   status: string;
   shipping_cost: number | null;
   cost_price: number | null;
+  seller_id?: string | null;
+  delivery_time?: string | null;
 };
 
 const MAX_IMAGES = 3;
@@ -295,6 +298,8 @@ function EditProductDialog({
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("I ri");
   const [stock, setStock] = useState("0");
+  const [sellerId, setSellerId] = useState<string | null>(null);
+  const [delivery, setDelivery] = useState<"24h" | "48h" | null>(null);
   const [images, setImages] = useState<ImgSlot[]>([]);
   const [urlInput, setUrlInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -309,6 +314,12 @@ function EditProductDialog({
     setCategory(product.category ?? "");
     setCondition(product.condition ?? "I ri");
     setStock(String(product.stock ?? 0));
+    setSellerId(product.seller_id ?? null);
+    setDelivery(
+      product.delivery_time === "24h" || product.delivery_time === "48h"
+        ? product.delivery_time
+        : null,
+    );
     const urls =
       Array.isArray(product.images) && product.images.length
         ? product.images
@@ -436,6 +447,8 @@ function EditProductDialog({
             stock: Math.max(0, Math.floor(Number(stock) || 0)),
             image_url: urls[0] ?? null,
             images: urls,
+            seller_id: sellerId,
+            delivery_time: delivery,
           },
         },
       });
