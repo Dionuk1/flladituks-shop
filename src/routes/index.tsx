@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Truck, ShieldCheck, Banknote, Search, SlidersHorizontal, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getFreeShippingBadge } from "@/lib/admin.functions";
 import { StoreHeader } from "@/components/store/store-header";
 import { CartDrawer } from "@/components/store/cart-drawer";
 import { ProductCard, discountPercent, type Product } from "@/components/store/product-card";
@@ -57,6 +58,18 @@ function Storefront() {
       if (error) throw error;
       return data as unknown as Product[];
     },
+  });
+
+  const { data: sellerMap = {} } = useQuery({
+    queryKey: ["public-sellers"],
+    queryFn: async () => {
+      const { data } = await supabase.from("sellers").select("id, name");
+      return Object.fromEntries((data ?? []).map((s) => [s.id, s.name])) as Record<string, string>;
+    },
+  });
+  const { data: freeBadge } = useQuery({
+    queryKey: ["free-ship-badge"],
+    queryFn: () => getFreeShippingBadge(),
   });
 
   const filtered = useMemo(() => {
@@ -175,7 +188,12 @@ function Storefront() {
         ) : (
           <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
             {filtered.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                sellerName={p.seller_id ? sellerMap[p.seller_id] : null}
+                showFreeBadge={freeBadge?.show ?? true}
+              />
             ))}
           </div>
         )}

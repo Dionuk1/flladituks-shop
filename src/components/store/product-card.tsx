@@ -9,6 +9,7 @@ import {
   MapPin,
   Truck,
   ShieldCheck,
+  Store,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,8 @@ export type Product = {
   status: string;
   shipping_cost?: number | null;
   location?: string | null;
+  seller_id?: string | null;
+  delivery_time?: string | null;
 
 };
 
@@ -81,13 +84,19 @@ export function discountPercent(price: number, oldPrice?: number | null): number
 
 function stockUrgency(stock: number): string | null {
   if (stock <= 0) return null;
-  if (stock === 1) return "🔥 Vetëm 1 në stok — Porosit tani!";
-  if (stock <= 3) return `🔥 Vetëm ${stock} në stok — Porosit tani!`;
-  if (stock <= 5) return "🔥 Sasi e kufizuar!";
+  if (stock === 1) return "Vetëm 1 në stok";
   return null;
 }
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  sellerName,
+  showFreeBadge = true,
+}: {
+  product: Product;
+  sellerName?: string | null;
+  showFreeBadge?: boolean;
+}) {
   const { add, setOpen, items } = useCart();
   const { t } = useI18n();
   const [detailOpen, setDetailOpen] = useState(false);
@@ -127,51 +136,35 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <>
       <div
-        className="group animate-fade-in flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-lg backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-2xl hover:shadow-[0_28px_60px_-20px_color-mix(in_oklab,var(--primary)_70%,transparent)] h-full min-w-0"
+        className="group animate-fade-in flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
         onClick={() => setDetailOpen(true)}
       >
-        <div className="relative aspect-square w-full overflow-hidden bg-secondary">
-
+        <div className="relative aspect-square w-full overflow-hidden bg-secondary/60">
           {cover ? (
             <img
               src={cover}
               alt={product.title}
               loading="lazy"
-              className="h-full w-full object-contain transition duration-700 ease-out group-hover:scale-105"
+              className="h-full w-full object-contain transition duration-500 ease-out group-hover:scale-105"
             />
           ) : (
             <div className="grid h-full w-full place-items-center text-muted-foreground">
               <ImageOff className="h-10 w-10" />
             </div>
           )}
-          <div className="absolute left-2 top-2 flex flex-wrap gap-1">
-            {product.category && (
-              <Badge variant="secondary" className="rounded-full bg-card/90 text-xs">
-                {product.category}
-              </Badge>
+          <div className="absolute left-2 top-2 flex max-w-[calc(100%-3.5rem)] flex-col items-start gap-1">
+            {(product.delivery_time === "24h" || product.delivery_time === "48h") && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
+                <Truck className="h-3 w-3" /> {product.delivery_time}
+              </span>
             )}
-            {product.condition && (
-              <Badge variant="outline" className="rounded-full bg-card/90 text-xs">
-                {product.condition}
-              </Badge>
-            )}
-          </div>
-          <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
-            <span className="rounded-full border border-white/30 bg-background/50 px-3 py-1 text-sm font-extrabold text-foreground shadow-lg backdrop-blur-md">
-              {formatPrice(product.price)}
-            </span>
             {discount && !sold && (
-              <span className="rounded-full bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground shadow">
+              <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-destructive-foreground">
                 -{discount}%
               </span>
             )}
           </div>
-          <HeartButton productId={product.id} className="absolute bottom-2 left-2" />
-          {gallery.length > 1 && (
-            <div className="absolute bottom-2 right-2 rounded-full bg-foreground/70 px-2 py-0.5 text-[10px] font-medium text-background">
-              +{gallery.length} foto
-            </div>
-          )}
+          <HeartButton productId={product.id} className="absolute right-2 top-2 h-8 w-8" />
           {sold ? (
             <div className="absolute inset-0 grid place-items-center bg-background/70 backdrop-blur-sm">
               <span className="rotate-[-8deg] rounded-md bg-destructive px-4 py-1.5 text-sm font-extrabold tracking-wider text-destructive-foreground shadow-lg">
@@ -187,49 +180,48 @@ export function ProductCard({ product }: { product: Product }) {
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 sm:p-4">
-          <h3 className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-bold leading-5 tracking-tight sm:text-base">{product.title}</h3>
-          {urgency && (
-            <span className="inline-flex w-fit animate-pulse items-center gap-1 rounded-full bg-destructive/15 px-3 py-1 text-xs font-bold text-destructive ring-1 ring-destructive/40 shadow-[0_0_18px_-4px_color-mix(in_oklab,var(--destructive)_70%,transparent)]">
-              <Flame className="h-3.5 w-3.5" /> {urgency}
-            </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+          {sellerName && (
+            <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+              <Store className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{sellerName}</span>
+            </p>
           )}
-          <div className="flex flex-wrap gap-1.5 text-xs">
-            <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-semibold text-primary">
-              <Truck className="h-3.5 w-3.5" />
-              {Number(product.shipping_cost ?? 0) > 0
-                ? `Transport ${formatPrice(product.shipping_cost)}`
-                : "Dërgesë Falas"}
+          <h3 className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-semibold leading-5">
+            {product.title}
+          </h3>
+          <div className="flex flex-wrap items-baseline gap-x-1.5">
+            <span className="whitespace-nowrap text-lg font-extrabold text-primary">
+              {formatPrice(product.price)}
             </span>
+            {discount && (
+              <span className="whitespace-nowrap text-xs text-muted-foreground line-through">
+                {formatPrice(product.old_price!)}
+              </span>
+            )}
           </div>
-          {product.description && (
-            <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">{product.description}</p>
-          )}
-          <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-2">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                <span className="whitespace-nowrap text-lg font-extrabold text-primary sm:text-xl">
-                  {formatPrice(product.price)}
-                </span>
-                {discount && (
-                  <span className="whitespace-nowrap text-xs text-muted-foreground line-through">
-                    {formatPrice(product.old_price!)}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {sold
-                  ? t("product.sold")
-                  : available
-                    ? `${product.stock} ${t("product.inStock")}`
-                    : t("product.unavailable")}
-              </p>
-            </div>
+          <div className="flex min-h-[1.25rem] flex-wrap gap-1 text-[11px]">
+            {urgency && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive">
+                <Flame className="h-3 w-3" /> {urgency}
+              </span>
+            )}
+            {Number(product.shipping_cost ?? 0) > 0 ? (
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <Truck className="h-3 w-3" /> Transport {formatPrice(product.shipping_cost)}
+              </span>
+            ) : showFreeBadge ? (
+              <span className="inline-flex items-center gap-1 font-medium text-primary">
+                <Truck className="h-3 w-3" /> Dërgesë Falas
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-auto flex flex-col gap-1.5 pt-1 sm:flex-row">
             <Button
               size="sm"
               disabled={!available}
               onClick={handleAdd}
-              className="relative overflow-hidden rounded-full transition-transform duration-200 hover:scale-105 active:scale-95"
+              className="relative h-9 flex-1 overflow-hidden rounded-full px-2"
             >
               {ripple && (
                 <span
@@ -248,11 +240,10 @@ export function ProductCard({ product }: { product: Product }) {
                 e.stopPropagation();
                 setExpressOpen(true);
               }}
-              className="rounded-full border-primary/40 text-primary transition-transform duration-200 hover:scale-105 active:scale-95"
+              className="h-9 flex-1 rounded-full border-primary/40 px-2 text-primary"
             >
               <Zap className="mr-1 h-4 w-4" /> Porosit Tani
             </Button>
-
           </div>
         </div>
       </div>

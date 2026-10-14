@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminDiscountsRouteImport } from './routes/admin.discounts'
+import { Route as AdminDyqanetRouteImport } from './routes/admin.dyqanet'
 import { Route as AdminFinancatRouteImport } from './routes/admin.financat'
 import { Route as AdminImportoRouteImport } from './routes/admin.importo'
 import { Route as AdminPorositeRouteImport } from './routes/admin.porosite'
@@ -57,6 +58,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminDiscountsRoute = AdminDiscountsRouteImport.update({
   id: '/discounts',
   path: '/discounts',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDyqanetRoute = AdminDyqanetRouteImport.update({
+  id: '/dyqanet',
+  path: '/dyqanet',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFinancatRoute = AdminFinancatRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/discounts': typeof AdminDiscountsRoute
+  '/admin/dyqanet': typeof AdminDyqanetRoute
   '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/discounts': typeof AdminDiscountsRoute
+  '/admin/dyqanet': typeof AdminDyqanetRoute
   '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/discounts': typeof AdminDiscountsRoute
+  '/admin/dyqanet': typeof AdminDyqanetRoute
   '/admin/financat': typeof AdminFinancatRoute
   '/admin/importo': typeof AdminImportoRoute
   '/admin/porosite': typeof AdminPorositeRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin/discounts'
+    | '/admin/dyqanet'
     | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin/discounts'
+    | '/admin/dyqanet'
     | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin/discounts'
+    | '/admin/dyqanet'
     | '/admin/financat'
     | '/admin/importo'
     | '/admin/porosite'
@@ -253,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDiscountsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/dyqanet': {
+      id: '/admin/dyqanet'
+      path: '/dyqanet'
+      fullPath: '/admin/dyqanet'
+      preLoaderRoute: typeof AdminDyqanetRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/financat': {
       id: '/admin/financat'
       path: '/financat'
@@ -307,6 +326,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminDiscountsRoute: typeof AdminDiscountsRoute
+  AdminDyqanetRoute: typeof AdminDyqanetRoute
   AdminFinancatRoute: typeof AdminFinancatRoute
   AdminImportoRoute: typeof AdminImportoRoute
   AdminPorositeRoute: typeof AdminPorositeRoute
@@ -318,6 +338,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDiscountsRoute: AdminDiscountsRoute,
+  AdminDyqanetRoute: AdminDyqanetRoute,
   AdminFinancatRoute: AdminFinancatRoute,
   AdminImportoRoute: AdminImportoRoute,
   AdminPorositeRoute: AdminPorositeRoute,
