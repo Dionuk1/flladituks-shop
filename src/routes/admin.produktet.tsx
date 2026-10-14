@@ -536,6 +536,13 @@ function EditProductDialog({
 
           <MarginHint cost={costPrice} price={price} />
 
+          <ProductExtraFields
+            sellerId={sellerId}
+            onSellerChange={setSellerId}
+            delivery={delivery}
+            onDeliveryChange={setDelivery}
+          />
+
 
 
           <div className="grid grid-cols-2 gap-3">

@@ -22,6 +22,7 @@ const navItems = [
   { to: "/admin/private", label: "Porosi Private", icon: UserRound },
   { to: "/admin/financat", label: "Financat", icon: Coins },
   { to: "/admin/discounts", label: "Kodet e Zbritjes", icon: Ticket },
+  { to: "/admin/dyqanet", label: "Dyqanet", icon: Store },
 ];
 
 function AdminLayout() {
