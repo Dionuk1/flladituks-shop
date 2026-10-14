@@ -326,6 +326,7 @@ export type Database = {
           condition: string | null
           cost_price: number
           created_at: string
+          delivery_time: string | null
           description: string | null
           id: string
           image_url: string | null
@@ -344,6 +345,7 @@ export type Database = {
           condition?: string | null
           cost_price?: number
           created_at?: string
+          delivery_time?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -362,6 +364,7 @@ export type Database = {
           condition?: string | null
           cost_price?: number
           created_at?: string
+          delivery_time?: string | null
           description?: string | null
           id?: string
           image_url?: string | null

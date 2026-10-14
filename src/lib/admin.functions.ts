@@ -236,6 +236,8 @@ const productSchema = z.object({
   status: z.string().max(50).optional(),
   shipping_cost: z.number().min(0).max(10_000).optional(),
   cost_price: z.number().min(0).max(1_000_000).optional(),
+  seller_id: z.string().uuid().nullable().optional(),
+  delivery_time: z.enum(["24h", "48h"]).nullable().optional(),
 });
 
 export const adminInsertProducts = createServerFn({ method: "POST" })
@@ -1225,4 +1227,101 @@ export const validateDiscountCode = createServerFn({ method: "POST" })
       discount_value: Number(d.discount_value),
       amount: computeDiscountAmount(d, data.subtotal),
     };
+  });
+
+// =================== Stores (sellers) managed by admin ===================
+
+function slugify(s: string) {
+  return (
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "dyqan"
+  );
+}
+
+export const adminListSellers = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [{ data: rows, error }, { data: prods }] = await Promise.all([
+      supabaseAdmin.from("sellers").select("id, name, slug, created_at").order("name"),
+      supabaseAdmin.from("products").select("seller_id"),
+    ]);
+    if (error) throw new Error(error.message);
+    const counts = new Map<string, number>();
+    for (const p of prods ?? []) {
+      const sid = (p as any).seller_id as string | null;
+      if (sid) counts.set(sid, (counts.get(sid) ?? 0) + 1);
+    }
+    return (rows ?? []).map((r) => ({ ...r, product_count: counts.get(r.id) ?? 0 }));
+  });
+
+export const adminSaveSeller = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; id?: string | null; name: string }) =>
+    z
+      .object({
+        token: z.string(),
+        id: z.string().uuid().nullable().optional(),
+        name: z.string().trim().min(2, "Emri është shumë i shkurtër").max(80),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: all } = await supabaseAdmin.from("sellers").select("id, name, slug");
+    const norm = (s: string) => s.trim().toLowerCase();
+    const slug = slugify(data.name);
+    const dup = (all ?? []).find(
+      (s) => s.id !== data.id && (norm(s.name) === norm(data.name) || s.slug === slug),
+    );
+    if (dup) throw new Error("Ekziston tashmë një dyqan me këtë emër");
+    if (data.id) {
+      const { error } = await supabaseAdmin
+        .from("sellers")
+        .update({ name: data.name, slug, updated_at: new Date().toISOString() })
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { id: data.id };
+    }
+    const { data: row, error } = await supabaseAdmin
+      .from("sellers")
+      .insert({ name: data.name, slug })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: row.id };
+  });
+
+// =================== Free-shipping badge visibility (display only) ===================
+
+const FREE_BADGE_KEY = "show_free_shipping_badge";
+
+export const getFreeShippingBadge = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("value")
+    .eq("key", FREE_BADGE_KEY)
+    .maybeSingle();
+  return { show: data?.value === false ? false : true };
+});
+
+export const adminSetFreeShippingBadge = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; show: boolean }) =>
+    z.object({ token: z.string(), show: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertToken(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("app_settings")
+      .upsert({ key: FREE_BADGE_KEY, value: data.show, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return { show: data.show };
   });
