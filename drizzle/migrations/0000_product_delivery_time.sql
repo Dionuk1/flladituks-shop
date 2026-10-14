@@ -1,0 +1,2 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS delivery_time text NULL;
+ALTER TABLE public.products ADD CONSTRAINT products_delivery_time_check CHECK (delivery_time IS NULL OR delivery_time IN ('24h','48h'));
