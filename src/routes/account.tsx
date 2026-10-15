@@ -149,7 +149,7 @@ function AccountPage() {
                   }`}
                 >
                   <t.icon className="h-4 w-4" />
-                  {t.key === "wishlist" ? (typeof window !== "undefined" && localStorage.getItem("flladituks_lang") === "en" ? "Wishlist" : "Të preferuarat") : t.label}
+                  {t.key === "wishlist" ? <WishlistLabel /> : t.label}
                 </button>
               ))}
               <button type="button" onClick={signOut} className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive transition hover:bg-destructive/10">
@@ -356,7 +356,7 @@ function WishlistTab() {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-bold">{useI18n().lang === "en" ? "Wishlist" : "Të preferuarat"}</h2>
+      <h2 className="text-lg font-bold"><WishlistLabel /></h2>
       {loading ? (
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       ) : products.length === 0 ? (
@@ -394,4 +394,9 @@ function WishlistTab() {
       )}
     </div>
   );
+}
+
+function WishlistLabel() {
+  const { lang } = useI18n();
+  return <>{lang === "en" ? "Wishlist" : "Të preferuarat"}</>;
 }
