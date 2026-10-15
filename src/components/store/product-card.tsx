@@ -247,7 +247,9 @@ export function ProductCard({
               </span>
             ) : null}
           </div>
-          <div className="mt-auto flex flex-col gap-1.5 pt-1 sm:flex-row">
+          <div
+            className={`flex flex-col gap-1.5 pt-1 sm:flex-row ${urgency ? "mt-auto" : ""}`}
+          >
             <Button
               size="sm"
               disabled={!available}
