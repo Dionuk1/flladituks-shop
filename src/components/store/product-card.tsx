@@ -34,19 +34,49 @@ function HeartButton({ productId, className = "" }: { productId: string; classNa
   return (
     <button
       type="button"
-      aria-label={saved ? "Hiq nga Wishlist" : "Shto në Wishlist"}
+      aria-label={saved ? "Hiq nga të preferuarat" : "Shto te të preferuarat"}
       aria-pressed={saved}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         void toggle(productId).then(() =>
-          toast.success(saved ? "U hoq nga Wishlist" : "U shtua në Wishlist"),
+          toast.success(saved ? "U hoq nga të preferuarat" : "U shtua te të preferuarat"),
         );
       }}
       className={`z-10 grid h-9 w-9 place-items-center rounded-full bg-background/80 shadow backdrop-blur transition hover:scale-110 ${className}`}
     >
       <Heart className={`h-4 w-4 ${saved ? "fill-destructive text-destructive" : "text-foreground"}`} />
     </button>
+  );
+}
+
+function WishlistToggleButton({ productId }: { productId: string }) {
+  const { has, toggle } = useWishlist();
+  const { lang } = useI18n();
+  const saved = has(productId);
+  const en = lang === "en";
+  return (
+    <Button
+      type="button"
+      size="lg"
+      variant="ghost"
+      aria-pressed={saved}
+      onClick={() =>
+        void toggle(productId).then(() =>
+          toast.success(
+            saved
+              ? en ? "Removed from Wishlist" : "U hoq nga të preferuarat"
+              : en ? "Added to Wishlist" : "U shtua te të preferuarat",
+          ),
+        )
+      }
+      className="w-full rounded-full"
+    >
+      <Heart className={`mr-2 h-4 w-4 ${saved ? "fill-destructive text-destructive" : ""}`} />
+      {saved
+        ? en ? "Remove from Wishlist" : "Hiq nga të preferuarat"
+        : en ? "Add to Wishlist" : "Shto te të preferuarat"}
+    </Button>
   );
 }
 
@@ -107,6 +137,7 @@ export function ProductCard({
   const gallery = getGallery(product);
   const cover = gallery[0] ?? null;
   const discount = discountPercent(product.price, product.old_price);
+  const freeVisible = showFreeBadge && Number(product.price) >= 25;
   const urgency = available ? stockUrgency(Number(product.stock ?? 0)) : null;
 
   function handleAdd(e?: React.MouseEvent) {
@@ -152,19 +183,19 @@ export function ProductCard({
               <ImageOff className="h-10 w-10" />
             </div>
           )}
-          <div className="absolute left-2 top-2 flex max-w-[calc(100%-3.5rem)] flex-col items-start gap-1">
+          <div className="absolute left-2 top-2 flex max-w-[calc(100%-4rem)] flex-col items-start gap-1">
             {(product.delivery_time === "24h" || product.delivery_time === "48h") && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
                 <Truck className="h-3 w-3" /> {product.delivery_time}
               </span>
             )}
-            {discount && !sold && (
-              <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-destructive-foreground">
-                -{discount}%
-              </span>
-            )}
           </div>
-          <HeartButton productId={product.id} className="absolute right-2 top-2 h-8 w-8" />
+          {discount && !sold && (
+            <span className="absolute right-2 top-2 z-10 rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-destructive-foreground">
+              -{discount}%
+            </span>
+          )}
+          <HeartButton productId={product.id} className="absolute bottom-2 right-2 h-8 w-8" />
           {sold ? (
             <div className="absolute inset-0 grid place-items-center bg-background/70 backdrop-blur-sm">
               <span className="rotate-[-8deg] rounded-md bg-destructive px-4 py-1.5 text-sm font-extrabold tracking-wider text-destructive-foreground shadow-lg">
@@ -187,11 +218,11 @@ export function ProductCard({
               <span className="truncate">{sellerName}</span>
             </p>
           )}
-          <h3 className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-semibold leading-5">
+          <h3 className="line-clamp-2 break-words text-sm font-semibold leading-5">
             {product.title}
           </h3>
           <div className="flex flex-wrap items-baseline gap-x-1.5">
-            <span className="whitespace-nowrap text-lg font-extrabold text-primary">
+            <span className="whitespace-nowrap text-xl font-extrabold text-primary">
               {formatPrice(product.price)}
             </span>
             {discount && (
@@ -200,7 +231,7 @@ export function ProductCard({
               </span>
             )}
           </div>
-          <div className="flex min-h-[1.25rem] flex-wrap gap-1 text-[11px]">
+          <div className="flex flex-wrap gap-1 text-[11px] empty:hidden">
             {urgency && (
               <span className="inline-flex items-center gap-0.5 rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive">
                 <Flame className="h-3 w-3" /> {urgency}
@@ -210,7 +241,7 @@ export function ProductCard({
               <span className="inline-flex items-center gap-1 text-muted-foreground">
                 <Truck className="h-3 w-3" /> Transport {formatPrice(product.shipping_cost)}
               </span>
-            ) : showFreeBadge ? (
+            ) : freeVisible ? (
               <span className="inline-flex items-center gap-1 font-medium text-primary">
                 <Truck className="h-3 w-3" /> Dërgesë Falas
               </span>
@@ -250,6 +281,7 @@ export function ProductCard({
 
       <ProductDetailDialog
         product={product}
+        freeVisible={freeVisible}
         gallery={gallery}
         discount={discount}
         available={available}
@@ -277,6 +309,7 @@ export function ProductCard({
 
 function ProductDetailDialog({
   product,
+  freeVisible,
   gallery,
   discount,
   available,
@@ -287,6 +320,7 @@ function ProductDetailDialog({
   onExpress,
 }: {
   product: Product;
+  freeVisible: boolean;
   gallery: string[];
   discount: number | null;
   available: boolean;
@@ -409,6 +443,7 @@ function ProductDetailDialog({
                 <Flame className="h-3.5 w-3.5" /> {stockUrgency(Number(product.stock ?? 0))}
               </span>
             )}
+            {(Number(product.shipping_cost ?? 0) > 0 || freeVisible) && (
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-semibold text-primary">
                 <Truck className="h-3.5 w-3.5" />
@@ -417,6 +452,7 @@ function ProductDetailDialog({
                   : "Dërgesë Falas"}
               </span>
             </div>
+            )}
 
             {product.description && (
               <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
@@ -460,6 +496,7 @@ function ProductDetailDialog({
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 {sold ? "Nuk ka stok" : "Shto në shportë"}
               </Button>
+              <WishlistToggleButton productId={product.id} />
               <p className="flex items-start gap-2 rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 Kontrolloni pakon te dera me postierin para pagesës.

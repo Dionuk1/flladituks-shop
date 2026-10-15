@@ -14,6 +14,7 @@ import { useWishlist } from "@/lib/wishlist";
 import { useCart } from "@/lib/cart";
 import { formatPrice, statusLabel, statusBadgeClass } from "@/lib/cities";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 
 const TAB_KEYS = ["pult", "porosi", "adresa", "hollesi", "wishlist"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -148,7 +149,7 @@ function AccountPage() {
                   }`}
                 >
                   <t.icon className="h-4 w-4" />
-                  {t.label}
+                  {t.key === "wishlist" ? <WishlistLabel /> : t.label}
                 </button>
               ))}
               <button type="button" onClick={signOut} className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive transition hover:bg-destructive/10">
@@ -355,7 +356,7 @@ function WishlistTab() {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-bold">Wishlist</h2>
+      <h2 className="text-lg font-bold"><WishlistLabel /></h2>
       {loading ? (
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       ) : products.length === 0 ? (
@@ -393,4 +394,9 @@ function WishlistTab() {
       )}
     </div>
   );
+}
+
+function WishlistLabel() {
+  const { lang } = useI18n();
+  return <>{lang === "en" ? "Wishlist" : "Të preferuarat"}</>;
 }

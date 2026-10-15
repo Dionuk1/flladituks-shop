@@ -226,7 +226,7 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition hover:bg-secondary"
                 >
                   <item.icon className="h-4 w-4 text-primary" />
-                  {item.label}
+                  {item.label === "Wishlist" && lang === "sq" ? "Të preferuarat" : item.label}
                 </Link>
               ))}
             </nav>
