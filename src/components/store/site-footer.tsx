@@ -1,3 +1,4 @@
+import logo from "@/assets/flladituks-logo.jpeg.asset.json";
 import { Link } from "@tanstack/react-router";
 import {
   Sparkles,
@@ -28,9 +29,7 @@ export function SiteFooter() {
       <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl gradient-brand text-primary-foreground shadow-sm">
-              <Sparkles className="h-5 w-5" />
-            </span>
+            <img src={logo.url} alt="FlladituKS" className="h-10 w-10 rounded-xl bg-card object-contain p-0.5 shadow-sm" />
             <span className="text-lg font-extrabold tracking-tight">
               Flladitu<span className="text-primary">KS</span>
             </span>

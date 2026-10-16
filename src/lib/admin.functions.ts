@@ -484,7 +484,7 @@ export const createOrder = createServerFn({ method: "POST" })
     if (!buyerId) throw new Error("Duhet të kyçeni për të përfunduar porosinë.");
     const itemsTotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const shippingPrice = await readShippingPriceServer();
-    const shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
+    let shippingCost = itemsTotal > 20 ? 0 : shippingPrice;
 
 
     // --- Re-validate promo code server-side ---
@@ -506,7 +506,12 @@ export const createOrder = createServerFn({ method: "POST" })
         (d.max_uses == null || d.used_count < d.max_uses);
       if (!usable) throw new Error("Kodi i zbritjes nuk është i vlefshëm");
       discountRow = d!;
-      discountAmount = computeDiscountAmount(d!, itemsTotal);
+      if (d!.discount_type === "free_shipping") {
+        shippingCost = 0;
+        discountAmount = 0;
+      } else {
+        discountAmount = computeDiscountAmount(d!, itemsTotal);
+      }
     }
 
     const total = Math.max(0, itemsTotal - discountAmount) + shippingCost;
@@ -1104,8 +1109,8 @@ const discountInput = z.object({
     .min(3)
     .max(40)
     .regex(/^[A-Za-z0-9_-]+$/, "Vetëm shkronja, numra, - dhe _"),
-  discount_type: z.enum(["percentage", "fixed"]),
-  discount_value: z.number().positive().max(100000),
+  discount_type: z.enum(["percentage", "fixed", "free_shipping"]),
+  discount_value: z.number().min(0).max(100000),
   start_date: z.string().min(1),
   expires_at: z.string().nullable().optional(),
   max_uses: z.number().int().positive().nullable().optional(),
@@ -1136,10 +1141,12 @@ export const adminSaveDiscount = createServerFn({ method: "POST" })
     const v = data.values;
     if (v.discount_type === "percentage" && v.discount_value > 100)
       throw new Error("Përqindja nuk mund të jetë mbi 100%");
+    if (v.discount_type !== "free_shipping" && !(v.discount_value > 0))
+      throw new Error("Vlera e zbritjes duhet të jetë më e madhe se 0");
     const payload = {
       code: v.code.toUpperCase(),
       discount_type: v.discount_type,
-      discount_value: v.discount_value,
+      discount_value: v.discount_type === "free_shipping" ? 0 : v.discount_value,
       start_date: new Date(v.start_date).toISOString(),
       expires_at: v.expires_at ? new Date(v.expires_at).toISOString() : null,
       max_uses: v.max_uses ?? null,
@@ -1190,6 +1197,7 @@ function computeDiscountAmount(
   row: { discount_type: string; discount_value: number },
   subtotal: number,
 ) {
+  if (row.discount_type === "free_shipping") return 0;
   const value = Number(row.discount_value ?? 0);
   const raw = row.discount_type === "percentage" ? (subtotal * value) / 100 : value;
   return Math.max(0, Math.min(subtotal, Math.round(raw * 100) / 100));
@@ -1226,6 +1234,7 @@ export const validateDiscountCode = createServerFn({ method: "POST" })
       discount_type: d.discount_type,
       discount_value: Number(d.discount_value),
       amount: computeDiscountAmount(d, data.subtotal),
+      free_shipping: d.discount_type === "free_shipping",
     };
   });
 

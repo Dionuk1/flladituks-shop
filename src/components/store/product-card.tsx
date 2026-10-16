@@ -254,7 +254,7 @@ export function ProductCard({
               size="sm"
               disabled={!available}
               onClick={handleAdd}
-              className="relative h-9 flex-1 overflow-hidden rounded-full px-2"
+              className="relative h-11 flex-1 overflow-hidden rounded-full px-2 text-sm sm:h-9"
             >
               {ripple && (
                 <span
@@ -273,7 +273,7 @@ export function ProductCard({
                 e.stopPropagation();
                 setExpressOpen(true);
               }}
-              className="h-9 flex-1 rounded-full border-primary/40 px-2 text-primary"
+              className="h-11 flex-1 rounded-full border-primary/40 px-2 text-sm text-primary sm:h-9"
             >
               <Zap className="mr-1 h-4 w-4" /> Porosit Tani
             </Button>
