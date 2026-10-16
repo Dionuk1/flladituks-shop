@@ -72,7 +72,7 @@ function randomCode() {
 type FormState = {
   id?: string;
   code: string;
-  discount_type: "percentage" | "fixed";
+  discount_type: "percentage" | "fixed" | "free_shipping";
   discount_value: string;
   start_date: string;
   expires_at: string;
@@ -126,7 +126,7 @@ function DiscountsPage() {
     setForm({
       id: d.id,
       code: d.code,
-      discount_type: d.discount_type === "fixed" ? "fixed" : "percentage",
+      discount_type: d.discount_type === "fixed" || d.discount_type === "free_shipping" ? d.discount_type : "percentage",
       discount_value: String(d.discount_value),
       start_date: toLocalInput(d.start_date),
       expires_at: toLocalInput(d.expires_at),
@@ -146,7 +146,7 @@ function DiscountsPage() {
             ...(form.id ? { id: form.id } : {}),
             code: form.code.trim().toUpperCase(),
             discount_type: form.discount_type,
-            discount_value: Number(form.discount_value),
+            discount_value: form.discount_type === "free_shipping" ? 0 : Number(form.discount_value),
             start_date: fromLocalInput(form.start_date) ?? new Date().toISOString(),
             expires_at: fromLocalInput(form.expires_at),
             max_uses: form.max_uses ? Number(form.max_uses) : null,
@@ -235,7 +235,9 @@ function DiscountsPage() {
                 <tr key={d.id} className="border-t">
                   <td className="p-3 font-mono font-semibold">{d.code}</td>
                   <td className="p-3">
-                    {d.discount_type === "percentage"
+                    {d.discount_type === "free_shipping"
+                      ? "Dërgesë falas"
+                      : d.discount_type === "percentage"
                       ? `${Number(d.discount_value)}%`
                       : formatPrice(Number(d.discount_value))}
                   </td>
@@ -301,14 +303,15 @@ function DiscountsPage() {
                 <Label>Lloji</Label>
                 <Select
                   value={form.discount_type}
-                  onValueChange={(v) => set("discount_type", v as "percentage" | "fixed")}
+                  onValueChange={(v) => set("discount_type", v as FormState["discount_type"])}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="percentage">Përqindje (%)</SelectItem>
-                    <SelectItem value="fixed">Shumë fikse (€)</SelectItem>
+                    <SelectItem value="percentage">Zbritje në çmim · Përqindje (%)</SelectItem>
+                    <SelectItem value="fixed">Zbritje në çmim · Shumë fikse (€)</SelectItem>
+                    <SelectItem value="free_shipping">Dërgesë falas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -319,7 +322,8 @@ function DiscountsPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={form.discount_value}
+                  disabled={form.discount_type === "free_shipping"}
+                  value={form.discount_type === "free_shipping" ? "0" : form.discount_value}
                   onChange={(e) => set("discount_value", e.target.value)}
                 />
               </div>
