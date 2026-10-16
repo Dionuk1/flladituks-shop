@@ -1,3 +1,6 @@
+import logo from "@/assets/flladituks-logo.jpeg.asset.json";
+import { supabase } from "@/integrations/supabase/client";
+import { UserMenu } from "@/components/store/user-menu";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useBuyerNotifications } from "@/lib/notifications";
 import { useEffect, useRef, useState } from "react";
@@ -81,9 +84,7 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
         </Button>
 
         <Link to="/" className="mx-auto flex min-w-0 items-center gap-2">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl gradient-brand text-primary-foreground shadow-sm">
-            <Sparkles className="h-4 w-4" />
-          </span>
+          <img src={logo.url} alt="FlladituKS" className="h-9 w-9 shrink-0 rounded-xl bg-card object-contain p-0.5 shadow-sm" />
           <span className="truncate text-base font-extrabold tracking-tight sm:text-lg">
             Flladitu<span className="text-primary">KS</span>
           </span>
@@ -156,7 +157,9 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
             </PopoverContent>
           </Popover>
 
-          <ThemeToggle className="border-0 bg-transparent shadow-none hover:bg-accent" />
+          <ThemeToggle className="hidden border-0 bg-transparent shadow-none hover:bg-accent sm:inline-flex" />
+
+          {notif.user && <UserMenu user={notif.user} />}
 
           <Button
             variant="ghost"
@@ -195,9 +198,7 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
         <SheetContent side="left" className="w-[86%] max-w-sm p-0 sm:w-80">
           <SheetHeader className="border-b p-4">
             <SheetTitle className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-xl gradient-brand text-primary-foreground">
-                <Sparkles className="h-4 w-4" />
-              </span>
+              <img src={logo.url} alt="FlladituKS" className="h-9 w-9 rounded-xl bg-card object-contain p-0.5" />
               Flladitu<span className="-ml-2 text-primary">KS</span>
             </SheetTitle>
           </SheetHeader>
