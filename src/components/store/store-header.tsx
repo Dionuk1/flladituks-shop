@@ -1,5 +1,4 @@
 import logo from "@/assets/flladituks-logo.jpeg.asset.json";
-import { supabase } from "@/integrations/supabase/client";
 import { UserMenu } from "@/components/store/user-menu";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useBuyerNotifications } from "@/lib/notifications";
@@ -157,7 +156,7 @@ export function StoreHeader({ onSearch }: { onSearch?: (q: string) => void }) {
             </PopoverContent>
           </Popover>
 
-          <ThemeToggle className="hidden border-0 bg-transparent shadow-none hover:bg-accent sm:inline-flex" />
+          <ThemeToggle className="border-0 bg-transparent shadow-none hover:bg-accent" />
 
           {notif.user && <UserMenu user={notif.user} />}
 
