@@ -50,7 +50,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
   const [shippingPrice, setShippingPrice] = useState(2.0);
   const [promoInput, setPromoInput] = useState("");
   const [promoChecking, setPromoChecking] = useState(false);
-  const [promo, setPromo] = useState<{ code: string; amount: number } | null>(null);
+  const [promo, setPromo] = useState<{ code: string; amount: number; free_shipping?: boolean } | null>(null);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -98,7 +98,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
     validateDiscountCode({ data: { code: promo.code, subtotal: itemsTotal } })
       .then((r) => {
         if (cancelled) return;
-        if (r.valid) setPromo({ code: r.code, amount: r.amount });
+        if (r.valid) setPromo({ code: r.code, amount: r.amount, free_shipping: r.free_shipping });
         else setPromo(null);
       })
       .catch(() => {});
@@ -109,7 +109,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
   }, [itemsTotal]);
 
   const discountAmount = promo ? Math.min(promo.amount, itemsTotal) : 0;
-  const shippingCost = itemsTotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingPrice;
+  const shippingCost = promo?.free_shipping || itemsTotal > FREE_SHIPPING_THRESHOLD ? 0 : shippingPrice;
   const total = Math.max(0, itemsTotal - discountAmount) + shippingCost;
 
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
@@ -121,8 +121,8 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
     try {
       const res = await validateDiscountCode({ data: { code, subtotal: itemsTotal } });
       if (res.valid) {
-        setPromo({ code: res.code, amount: res.amount });
-        toast.success(`Kodi ${res.code} u aplikua!`);
+        setPromo({ code: res.code, amount: res.amount, free_shipping: res.free_shipping });
+        toast.success(res.free_shipping ? "Kodi u aplikua — dërgesa është falas." : `Kodi ${res.code} u aplikua!`);
       } else {
         setPromo(null);
         toast.error(res.error);
@@ -285,7 +285,7 @@ export function CheckoutForm({ onBack, onDone }: { onBack: () => void; onDone: (
             <div className="flex items-center gap-2 rounded-xl border border-success/40 bg-success/10 p-3 text-sm">
               <Tag className="h-4 w-4 text-success" />
               <span className="flex-1 font-semibold">
-                {promo.code} · −{formatPrice(discountAmount)}
+                {promo.free_shipping ? `${promo.code} · Kodi u aplikua — dërgesa është falas.` : `${promo.code} · −${formatPrice(discountAmount)}`}
               </span>
               <button
                 type="button"
